@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { Globe } from "./Globe";
 export default function HeroSection() {
   const [glowIntensity, setGlowIntensity] = useState(0);
 
@@ -34,7 +35,7 @@ export default function HeroSection() {
             className="absolute inset-0 bg-cyan-500 rounded-full blur-3xl opacity-30"
             style={{ transform: `scale(${1 + glowIntensity * 0.001})` }}
           ></div>
-          <div className="relative w-24 h-24 mx-auto bg-gradient-to-br from-white to-blue-600 rounded-full flex items-center justify-center">
+          <div className="relative  flex items-center justify-center">
             <Image
                 src="/movo non-text.png"
                 alt="Movo Icon"
@@ -51,6 +52,7 @@ export default function HeroSection() {
           <br />
           <span className="text-white">Crypto Bridge</span>
         </h1>
+        
 
         <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto leading-relaxed">
           Swap crypto seamlessly across multiple blockchains. Send tokens to anyone, anywhere, 
@@ -103,6 +105,11 @@ export default function HeroSection() {
           50% { transform: translateY(-20px) rotate(180deg); }
         }
       `}</style>
+      <div className="absolute bottom-100 left-1/2 -translate-x-1/2 w-[120vw] h-[120vw] overflow-hidden ">
+        <div className="absolute bottom-0 left-0 w-full h-1/2">
+          <Globe />
+        </div>
+      </div>
     </section>
   );
 }
