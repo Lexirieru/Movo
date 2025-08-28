@@ -1,116 +1,179 @@
 "use client";
 
-import {
-  useMiniKit,
-  useAddFrame,
-  useOpenUrl,
-} from "@coinbase/onchainkit/minikit";
-import {
-  Name,
-  Identity,
-  Address,
-  Avatar,
-  EthBalance,
-} from "@coinbase/onchainkit/identity";
-import {
-  ConnectWallet,
-  Wallet,
-  WalletDropdown,
-  WalletDropdownDisconnect,
-} from "@coinbase/onchainkit/wallet";
-import { useEffect, useMemo, useState, useCallback } from "react";
-import { Button } from "./components/DemoComponents";
-import { Icon } from "./components/DemoComponents";
-import { Home } from "./components/DemoComponents";
-import { Features } from "./components/DemoComponents";
+import { useMiniKit } from "@coinbase/onchainkit/minikit";
+import { useEffect, useState } from "react";
+import Header from "./components/landing/Header";
+import HeroSection from "./components/landing/HeroSection";
+import HowItWorks from "./components/landing/HowItWorks";
+import Footer from "./components/landing/Footer";
 
 export default function App() {
-  const { setFrameReady, isFrameReady, context } = useMiniKit();
-  const [frameAdded, setFrameAdded] = useState(false);
-  const [activeTab, setActiveTab] = useState("home");
-
-  const addFrame = useAddFrame();
-  const openUrl = useOpenUrl();
-
+  // =========================================================================
+  // BAGIAN INTI MINI APP - JANGAN DIHAPUS
+  // Kode ini penting untuk komunikasi dengan aplikasi Coinbase
+  // =========================================================================
+  const { setFrameReady, isFrameReady } = useMiniKit();
   useEffect(() => {
     if (!isFrameReady) {
       setFrameReady();
     }
   }, [setFrameReady, isFrameReady]);
 
-  const handleAddFrame = useCallback(async () => {
-    const frameAdded = await addFrame();
-    setFrameAdded(Boolean(frameAdded));
-  }, [addFrame]);
+  // State untuk mengelola loading dan animasi
+  const [isLoaded, setIsLoaded] = useState(false);
 
-  const saveFrameButton = useMemo(() => {
-    if (context && !context.client.added) {
-      return (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleAddFrame}
-          className="text-[var(--app-accent)] p-4"
-          icon={<Icon name="plus" size="sm" />}
-        >
-          Save Frame
-        </Button>
-      );
-    }
-
-    if (frameAdded) {
-      return (
-        <div className="flex items-center space-x-1 text-sm font-medium text-[#0052FF] animate-fade-out">
-          <Icon name="check" size="sm" className="text-[#0052FF]" />
-          <span>Saved</span>
-        </div>
-      );
-    }
-
-    return null;
-  }, [context, frameAdded, handleAddFrame]);
+  useEffect(() => {
+    setIsLoaded(true);
+  }, []);
 
   return (
-    <div className="flex flex-col min-h-screen font-sans text-[var(--app-foreground)] mini-app-theme from-[var(--app-background)] to-[var(--app-gray)]">
-      <div className="w-full max-w-md mx-auto px-4 py-3">
-        <header className="flex justify-between items-center mb-3 h-11">
-          <div>
-            <div className="flex items-center space-x-2">
-              <Wallet className="z-10">
-                <ConnectWallet>
-                  <Name className="text-inherit" />
-                </ConnectWallet>
-                <WalletDropdown>
-                  <Identity className="px-4 pt-3 pb-2" hasCopyAddressOnClick>
-                    <Avatar />
-                    <Name />
-                    <Address />
-                    <EthBalance />
-                  </Identity>
-                  <WalletDropdownDisconnect />
-                </WalletDropdown>
-              </Wallet>
-            </div>
-          </div>
-          <div>{saveFrameButton}</div>
-        </header>
+    <div className={`min-h-screen bg-black text-white overflow-x-hidden transition-opacity duration-1000 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
+      {/* Global Styles */}
+      <style jsx global>{`
+        /* Smooth Scrolling */
+        html {
+          scroll-behavior: smooth;
+        }
 
-        <main className="flex-1">
-          {activeTab === "home" && <Home setActiveTab={setActiveTab} />}
-          {activeTab === "features" && <Features setActiveTab={setActiveTab} />}
-        </main>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+          width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+          background: #1a1a1a;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+          background: linear-gradient(180deg, #06b6d4, #3b82f6);
+          border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(180deg, #0891b2, #2563eb);
+        }
 
-        <footer className="mt-2 pt-4 flex justify-center">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-[var(--ock-text-foreground-muted)] text-xs"
-            onClick={() => openUrl("https://base.org/builders/minikit")}
-          >
-            Built on Base with MiniKit
-          </Button>
-        </footer>
+        /* CSS Variables for Theme */
+        :root {
+          --app-background: #000000;
+          --app-foreground: #ffffff;
+          --app-secondary-foreground: #a1a1aa;
+          --app-accent: #06b6d4;
+          --app-accent-foreground: #ffffff;
+        }
+
+        /* Glow Animation */
+        @keyframes glow {
+          0%, 100% {
+            text-shadow: 0 0 5px #06b6d4, 0 0 10px #06b6d4, 0 0 15px #06b6d4;
+          }
+          50% {
+            text-shadow: 0 0 10px #3b82f6, 0 0 20px #3b82f6, 0 0 30px #3b82f6;
+          }
+        }
+
+        /* Pulse Animation */
+        @keyframes pulse-glow {
+          0%, 100% {
+            box-shadow: 0 0 5px rgba(6, 182, 212, 0.5);
+          }
+          50% {
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.8), 0 0 30px rgba(59, 130, 246, 0.6);
+          }
+        }
+
+        /* Gradient Animation */
+        @keyframes gradient-shift {
+          0%, 100% {
+            background-position: 0% 50%;
+          }
+          50% {
+            background-position: 100% 50%;
+          }
+        }
+
+        /* Floating Animation */
+        @keyframes float-smooth {
+          0%, 100% {
+            transform: translateY(0px);
+          }
+          50% {
+            transform: translateY(-10px);
+          }
+        }
+
+        /* Neon Glow Utilities */
+        .glow-cyan {
+          animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        .pulse-glow-cyan {
+          animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        .gradient-animated {
+          background-size: 400% 400%;
+          animation: gradient-shift 3s ease infinite;
+        }
+
+        .float-animation {
+          animation: float-smooth 3s ease-in-out infinite;
+        }
+
+        /* Background Grid Animation */
+        .grid-background {
+          background-image: 
+            linear-gradient(rgba(6, 182, 212, 0.1) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(6, 182, 212, 0.1) 1px, transparent 1px);
+          background-size: 50px 50px;
+          animation: grid-move 20s linear infinite;
+        }
+
+        @keyframes grid-move {
+          0% {
+            transform: translate(0, 0);
+          }
+          100% {
+            transform: translate(50px, 50px);
+          }
+        }
+      `}</style>
+
+      {/* Background Grid */}
+      <div className="fixed inset-0 grid-background opacity-30 pointer-events-none"></div>
+
+      {/* Main Content */}
+      <div className="relative z-10">
+        <Header />
+        <HeroSection />
+        <HowItWorks />
+        <Footer />
       </div>
+
+      {/* Back to Top Button */}
+      <button
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        className="fixed bottom-8 right-8 w-12 h-12 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-full flex items-center justify-center text-white hover:scale-110 transition-all duration-300 shadow-lg hover:shadow-cyan-500/25 z-50"
+        style={{
+          opacity: isLoaded ? '1' : '0',
+          transform: isLoaded ? 'translateY(0)' : 'translateY(20px)',
+          transition: 'all 0.3s ease'
+        }}
+      >
+        <svg 
+          className="w-6 h-6" 
+          fill="none" 
+          stroke="currentColor" 
+          viewBox="0 0 24 24"
+        >
+          <path 
+            strokeLinecap="round" 
+            strokeLinejoin="round" 
+            strokeWidth={2} 
+            d="M5 10l7-7m0 0l7 7m-7-7v18" 
+          />
+        </svg>
+      </button>
     </div>
   );
 }
