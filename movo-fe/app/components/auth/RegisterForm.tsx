@@ -1,4 +1,5 @@
 "use client";
+import { Mail, Lock, UserRound  } from "lucide-react"
 
 // Definisikan tipe untuk props
 interface RegisterFormProps {
@@ -14,51 +15,55 @@ export default function RegisterForm({ switchToLogin }: RegisterFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div>
-        <label
-          htmlFor="fullname"
-          className="block text-sm font-medium text-gray-300"
-        >
-          Full Name
-        </label>
+       <div className="relative flex items-center">
+        <UserRound className="absolute left-3 text-gray-400 w-5 h-5" />
         <input
-          type="text"
-          id="fullname"
-          name="fullname"
+          type="fullName"
+          id="fullName"
+          name="fullName"
+          placeholder="Full Name"
           required
-          className="mt-1 block w-full bg-gray-800/50 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-cyan-500 focus:border-cyan-500"
+          className="w-full pl-10 pr-3 py-2 rounded-md bg-transparent border border-transparent text-white placeholder-gray-400 focus:border-cyan-500 focus:ring-cyan-500 focus:outline-none"
         />
       </div>
-      <div>
-        <label
-          htmlFor="email"
-          className="block text-sm font-medium text-gray-300"
-        >
-          Email
-        </label>
+      
+      {/* Email */}
+      <div className="relative flex items-center">
+        <Mail className="absolute left-3 text-gray-400 w-5 h-5" />
         <input
           type="email"
           id="email"
           name="email"
+          placeholder="Email"
           required
-          className="mt-1 block w-full bg-gray-800/50 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-cyan-500 focus:border-cyan-500"
+          className="w-full pl-10 pr-3 py-2 rounded-md bg-transparent border border-transparent text-white placeholder-gray-400 focus:border-cyan-500 focus:ring-cyan-500 focus:outline-none"
         />
       </div>
-      <div>
-        <label
-          htmlFor="password"
-          className="block text-sm font-medium text-gray-300"
-        >
-          Password
-        </label>
+
+      {/* Password */}
+      <div className="relative flex items-center">
+        <Lock className="absolute left-3 text-gray-400 w-5 h-5" />
         <input
           type="password"
           id="password"
           name="password"
+          placeholder="Password"
           required
-          className="mt-1 block w-full bg-gray-800/50 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-cyan-500 focus:border-cyan-500"
+          className="w-full pl-10 pr-3 py-2 rounded-md bg-transparent border border-transparent text-white placeholder-gray-400 focus:border-cyan-500 focus:ring-cyan-500 focus:outline-none"
         />
       </div>
+
+
+      
+      <div>
+        <button
+          type="submit"
+          className="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-sm text-sm font-bold text-white bg-gradient-to-r from-cyan-600 to-blue-600 hover:scale-105 transition-transform"
+        >
+          Sign Up
+        </button>
+      </div>
+
       <div className="text-center text-sm text-gray-400">
         <span>Already have an account? </span>
         <button
@@ -67,14 +72,6 @@ export default function RegisterForm({ switchToLogin }: RegisterFormProps) {
           className="font-medium text-cyan-400 hover:text-cyan-300"
         >
           Sign In
-        </button>
-      </div>
-      <div>
-        <button
-          type="submit"
-          className="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-sm text-sm font-bold text-white bg-gradient-to-r from-cyan-600 to-blue-600 hover:scale-105 transition-transform"
-        >
-          Sign Up
         </button>
       </div>
     </form>
