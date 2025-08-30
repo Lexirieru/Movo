@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { GroupOfUserModel, UserModel } from "../models/userModel"; // Pastikan path-nya benar
-import { TransactionRecordModel, WithdrawHistoryModel } from "../models/transactionRecordModel";
-import { createSignature, generateSignatureForRedeem } from "../utils/generate_signature";
+import { WithdrawHistoryModel } from "../models/transactionRecordModel";
+import { generateSignatureForRedeem } from "../utils/generate_signature";
 import axios from "axios";
 import { burnIdrx } from "../utils/burnIdrx";
 import { bankDirectory } from "../utils/directory";

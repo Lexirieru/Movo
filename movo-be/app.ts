@@ -56,7 +56,7 @@ app.use(passport.session());
 // });
 
 app.use("/", authRoutes);
-// app.use("/", pricefeedRoutes);
+app.use("/", pricefeedRoutes);
 app.use("/", loggedInRoutes);
 
 //handle semua endpoint yang gaada untuk menampilkan 404 not found page

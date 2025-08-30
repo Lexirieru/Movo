@@ -13,7 +13,6 @@ const UserDataSchema = new Schema(
       required : false,
       unique : false,
     },
-    // Company mana yang punya User ini,
     email : {
       type: String,
       required : true,
@@ -136,4 +135,20 @@ const GroupOfUserSchema = new Schema(
 export const GroupOfUserModel = mongoose.model(
   "GroupOfUserData",
   GroupOfUserSchema
+);
+
+const LoginSessionTokenSchema = new Schema({
+  email: {
+    type: String,
+    required: true,
+  },
+  token: {
+    type: String,
+    required: true,
+  },
+});
+
+export const LoginSessionTokenModel = mongoose.model(
+  "LoginSession",
+  LoginSessionTokenSchema
 );

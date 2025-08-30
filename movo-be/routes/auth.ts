@@ -1,13 +1,11 @@
 import express, { NextFunction, Request, Response, Router } from "express";
 import passport from "passport";
 import { Strategy as GoogleStrategy, Profile } from "passport-google-oauth20";
-
 import { generateToken } from "../config/generateToken";
 import jwt from "jsonwebtoken";
-const router: Router = express.Router();
+import { LoginSessionTokenModel, UserModel } from "../models/userModel";
 
-// CHECK AUTH STATUS
-// check auth
+const router: Router = express.Router();
 
 router.get(
   "/check-auth",
@@ -29,7 +27,7 @@ router.get(
 
         // console.log(decoded);
 
-        const company = await CompanyDataModel.findOne({
+        const company = await UserModel.findOne({
           email: decoded.email,
         });
 
@@ -46,9 +44,6 @@ router.get(
           res.json({
             _id: company._id,
             email: company.email,
-            companyId : company.companyId,
-            companyName: company.companyName,
-            profilePicture: company.profilePicture,
           });
           return;
         }
@@ -78,14 +73,14 @@ passport.use(
       done
     ) {
       try {
-        const existingCompany = await CompanyDataModel.findOne({
+        const existingCompany = await UserModel.findOne({
           companyId: profile.id,
         });
 
         if (existingCompany) {
           return done(null, existingCompany);
         } else {
-          const newCompany = await CompanyDataModel.create({
+          const newCompany = await UserModel.create({
             companyId: profile.id,
             email: profile.emails?.[0]?.value,
             companyName: profile.displayName,
@@ -125,7 +120,7 @@ router.get(
 
     if (email) {
       // ambil user terbaru
-      const found = await CompanyDataModel.findOne({ email });
+      const found = await UserModel.findOne({ email });
 
       const userToUse = found ?? user;
 
@@ -177,4 +172,5 @@ router.post("/logout", (req: Request, res: Response) => {
     });
   });
 });
+
 export default router;

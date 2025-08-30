@@ -17,7 +17,7 @@ type RouteDefinition = {
 const routes: RouteDefinition[] = [
   // Payroll data
   {
-    method: "get",
+    method: "post",
     path: "/getIdrxRateFromUSDC",
     action: getIdrxRateFromUSDC,
   },
