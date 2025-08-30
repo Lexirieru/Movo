@@ -1,15 +1,21 @@
 import { Request, Response } from "express";
-import {UserModel } from "../models/userModel"; // Pastikan path-nya benar
+import {LoginSessionTokenModel, UserModel } from "../models/userModel"; // Pastikan path-nya benar
 import { createSignature } from "../utils/generate_signature";
 import axios from "axios";
 import fs from "fs";
+import { generateToken } from "../config/generateToken";
 
 const movoApiKey = process.env.IDRX_API_KEY!;
 const movoSecretKey = process.env.IDRX_SECRET_KEY!;
 
 // controller untuk MOVO
+
 export async function onBoardingUser(req: Request, res: Response){
   const {email, fullname} = req.body
+  if(!email || !fullname){
+    res.status(404).json({message: "Email and fullname are required!"})
+    return;
+  }
   const path = "https://idrx.co/api/auth/onboarding";
   console.log(email, fullname)
   const form = {
@@ -38,7 +44,6 @@ export async function onBoardingUser(req: Request, res: Response){
     console.log('res.data: ');
     console.log(resData.data);
 
-    
     const newUser = new UserModel({
       idrxId : resData.data.data.id,
       email,
@@ -49,9 +54,30 @@ export async function onBoardingUser(req: Request, res: Response){
     });
 
     await newUser.save();
+    
+    const token = generateToken({
+      _id: newUser._id.toString(),
+      email: newUser.email,
+    });
+
+    const tokenSession = new LoginSessionTokenModel({
+      email,
+      token,
+    });
+    await tokenSession.save();
+
+    res.cookie("user_session", token, {
+      httpOnly: false,
+      secure: true,
+      sameSite: "none",
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 hari
+    });
+    
     res.status(201).json({
       data : resData.data
     });
+    return
+    
   }
   catch(err){
     console.log(err);
@@ -59,6 +85,7 @@ export async function onBoardingUser(req: Request, res: Response){
     return
   }
 } 
+
 export async function addBankAccount(req : Request, res : Response){
   const {email, bankAccountNumber, bankCode} = req.body
   const form = {

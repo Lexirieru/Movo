@@ -31,7 +31,7 @@ interface ChatItem {
 
 
 export const getResponseFromGemini = async (req: Request, res: Response) => {
-  const { companyId, question } = req.body;
+  const { companyId, question, IDRX_CHAIN_ID } = req.body;
 
   if ( !question) {
      res.status(400).json({success : false, response: "Missing required parameters (companyId or question)"});
@@ -43,7 +43,7 @@ export const getResponseFromGemini = async (req: Request, res: Response) => {
     if(conversionParsed){
       const { amount, fromCurrency, toCurrency } = conversionParsed;
       const provider = new ethers.providers.JsonRpcProvider(ALCHEMY_RPC_URL);
-      const rate = await resolveTokenToIdrx(fromCurrency, provider);
+      const rate = await resolveTokenToIdrx(fromCurrency, provider, IDRX_CHAIN_ID);
       const convertedAmount = (amount * rate).toFixed(2);
 
       res.status(200).json({

@@ -1,4 +1,3 @@
-import { findPackageJSON } from "module";
 import mongoose, { Schema } from "mongoose";
 
 const UserDataSchema = new Schema(

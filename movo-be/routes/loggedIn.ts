@@ -2,30 +2,6 @@ import { addBankAccount, deleteBankAccount, getBankAccount, getOrganizationMembe
 
 import express, { RequestHandler } from "express";
 import { addReceiverToGroup } from "../controllers/userSenderController";
-// import {
-//   // addPayrollData,
-//   // addPayrollDetailsData,
-//   // loadPayrollData,
-//   // loadPayrollDetailsData,
-//   addInvoiceData,
-//   loadInvoiceData,
-// } from "../controllers/transactionController";
-
-// import {
-//   addOrUpdateEmployeeData,
-//   loadEmployeeDataFromGroup,
-//   addGroupName,
-//   addOrUpdateCompanyStats,
-//   addOrUpdateCompanyData,
-//   loadGroupName,
-//   deleteEmployeeDataFromGroup,
-//   loadCompanyTransactionHistory,
-//   loadDetailedEmployeeTransactionHistory,
-//   loadDetailedTransactionHistory,
-//   onBoardingUser,
-//   getOrganizationMembers
-// } from "../controllers/userGeneralController";
-
 const router = express.Router();
 
 type RouteMethod = "get" | "post" | "put" | "delete";

@@ -6,6 +6,7 @@ import erc20ABI from "../abi/erc20ABI.json"; // ABI ERC20
 // import { addInvoiceData } from "../controllers/transactionController";
 import dotenv from "dotenv";
 dotenv.config();
+
 const apiKey = process.env.IDRX_API_KEY;
 const secret = process.env.IDRX_SECRET_KEY!;
 

@@ -55,7 +55,7 @@ router.get(
     }
   }
 );
-
+/*
 // GOOGLE STRATEGY
 passport.use(
   new GoogleStrategy(
@@ -155,6 +155,7 @@ router.get(
     }
   }
 );
+*/
 
 // LOGOUT
 router.post("/logout", (req: Request, res: Response) => {

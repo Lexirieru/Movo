@@ -1,6 +1,4 @@
-
-import { ethers } from "ethers";
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema} from "mongoose";
 
 const TransactionRecordSchema = new Schema(
   {

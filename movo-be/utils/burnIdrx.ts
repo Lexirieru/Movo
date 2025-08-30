@@ -779,11 +779,14 @@ import { ethers } from "ethers";
 import dotenv from "dotenv";
 dotenv.config();
 
+// contract address dari token IDRX
 const IDRX_CONTRACT_ADDRESS = "0x18Bc5bcC660cf2B9cE3cd51a404aFe1a0cBD3C22";
 
 const provider = new ethers.providers.JsonRpcProvider(
   process.env.ALCHEMY_RPC_URL_BASE_MAINNET!
-); // rpcnya chain base mainnet
+); // rpcnya chain base mainnet'
+
+// gimana caranya smart contract bisa ngirim privatekey escrow yang barusan di generate ke backend
 const signer = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
 
 const idrxContract = new ethers.Contract(
@@ -791,6 +794,7 @@ const idrxContract = new ethers.Contract(
   idrxAbi,
   provider
 );
+
 const idrxContractSigner = idrxContract.connect(signer);
 
 export async function checkETHBalance() {
@@ -814,6 +818,7 @@ export async function checkIDRXBalance() {
   const decimals = await idrxContract.decimals();
   console.log("IDRX decimals:", decimals);
 }
+
 
 checkIDRXBalance();
 
