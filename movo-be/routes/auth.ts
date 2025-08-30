@@ -1,9 +1,8 @@
 import express, { NextFunction, Request, Response, Router } from "express";
-import passport from "passport";
-import { Strategy as GoogleStrategy, Profile } from "passport-google-oauth20";
 import { generateToken } from "../config/generateToken";
 import jwt from "jsonwebtoken";
 import { LoginSessionTokenModel, UserModel } from "../models/userModel";
+import bcrypt from "bcrypt";
 
 const router: Router = express.Router();
 
@@ -12,7 +11,7 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     const token = req.cookies?.user_session;
     if (!token) {
-      console.log("❌ Token tidak ditemukan");
+      console.log("Token not found");
       res
         .status(401)
         .json({ authenticated: false, message: "Token not found" });
@@ -25,30 +24,23 @@ router.get(
           email: string;
         };
 
-        // console.log(decoded);
-
-        const company = await UserModel.findOne({
+        const user = await UserModel.findOne({
+          _id : decoded._id,
           email: decoded.email,
         });
 
-        if (!company) {
-          console.log("❌ Token tidak valid");
+        if (!user) {
+          console.log("Invalid token");
           res
             .status(401)
             .json({ authenticated: false, message: "Invalid token" });
           return;
         } else {
-          // console.log("✅ Token valid");
-
-          // ✅ Kirimkan data perusahaan ke FE
-          res.json({
-            _id: company._id,
-            email: company.email,
-          });
+          res.json({message : "Successfully authenticated", authenticated : true});
           return;
         }
       } catch (err) {
-        console.error("❌ Error saat verifikasi token:", err);
+        console.error("Error while verifying token:", err);
         res.status(401).json({ authenticated: false, message: "Token error" });
         return;
       }
@@ -56,6 +48,70 @@ router.get(
   }
 );
 
+router.post(
+  "/login",
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      res.status(400).json({ message: "Email and password are required" });
+      return;
+    }
+
+    try {
+      const user = await UserModel.findOne({ email });
+      if (!user) {
+        res.status(404).json({ message: "Account with specified email is not found" });
+        return;
+      }
+
+      const isPasswordValid = await bcrypt.compare(password, user.hashedPassword);
+
+      if (!isPasswordValid) {
+        res.status(401).json({ message: "Invalid password" });
+        return;
+      }
+
+      const token = await generateCookiesToken(email, user);
+
+      res.cookie("user_session", token, {
+        httpOnly: false, // sebaiknya true di production
+        secure: true,
+        sameSite: "none",
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 hari
+      });
+
+      res.status(200).json({
+        message: "Login successful",
+      });
+
+      return;
+    } catch (err) {
+      console.error("Error while logging in:", err);
+      res.status(500).json({ message: "Internal server error" });
+      return;
+    }
+  }
+);
+
+
+
+export async function generateCookiesToken(email : string, newUser : InstanceType<typeof UserModel>, ){
+  const token = generateToken({
+    _id: newUser._id.toString(),
+    email: newUser.email,
+  });
+
+  const tokenSession = new LoginSessionTokenModel({
+    _id : newUser._id.toString(),
+    email,
+    token,
+  });
+  
+  await tokenSession.save();
+
+  return token;
+}
 
 /*
 // GOOGLE STRATEGY

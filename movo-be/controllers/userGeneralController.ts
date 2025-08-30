@@ -3,7 +3,8 @@ import {LoginSessionTokenModel, UserModel } from "../models/userModel"; // Pasti
 import { createSignature } from "../utils/generate_signature";
 import axios from "axios";
 import fs from "fs";
-import { generateToken } from "../config/generateToken";
+import bcrypt from "bcrypt";
+import { generateCookiesToken } from "../routes/auth";
 
 const movoApiKey = process.env.IDRX_API_KEY!;
 const movoSecretKey = process.env.IDRX_SECRET_KEY!;
@@ -11,21 +12,26 @@ const movoSecretKey = process.env.IDRX_SECRET_KEY!;
 // controller untuk MOVO
 
 export async function onBoardingUser(req: Request, res: Response){
-  const {email, fullname} = req.body
+  const {email, fullname, password, idFile} = req.body;
+
   if(!email || !fullname){
     res.status(404).json({message: "Email and fullname are required!"})
     return;
   }
-  const path = "https://idrx.co/api/auth/onboarding";
-  console.log(email, fullname)
+  const saltRounds = 10; // default cukup 10, jangan terlalu tinggi biar ga lambat
+  const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+  console.log(email, password, fullname, idFile)
   const form = {
     email,
     fullname, 
+    hashedPassword,
     // address, 
     // idNumber, 
     idFile : fs.createReadStream('./Screenshot 2025-08-28 at 22.36.43.png')
   }
-
+  
+  const path = "https://idrx.co/api/auth/onboarding";
   const bufferReq = Buffer.from(JSON.stringify(form), 'base64').toString('utf8');
   const timestamp = Math.round((new Date()).getTime()).toString();
   const sig = createSignature('POST', path, bufferReq, timestamp, movoSecretKey);
@@ -47,24 +53,18 @@ export async function onBoardingUser(req: Request, res: Response){
     const newUser = new UserModel({
       idrxId : resData.data.data.id,
       email,
+      hashedPassword,
       fullname,
       idFile : form.idFile.path,
       apiKey : resData.data.data.apiKey,
       secretKey : resData.data.data.apiSecret,
     });
 
-    await newUser.save();
-    
-    const token = generateToken({
-      _id: newUser._id.toString(),
-      email: newUser.email,
-    });
+    // kurang mbuat handle untuk user yang udah onboard alias user yang mau login
 
-    const tokenSession = new LoginSessionTokenModel({
-      email,
-      token,
-    });
-    await tokenSession.save();
+    await newUser.save();
+
+    const token = await generateCookiesToken(email, newUser);
 
     res.cookie("user_session", token, {
       httpOnly: false,
@@ -77,7 +77,6 @@ export async function onBoardingUser(req: Request, res: Response){
       data : resData.data
     });
     return
-    
   }
   catch(err){
     console.log(err);

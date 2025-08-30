@@ -820,7 +820,6 @@ export async function checkIDRXBalance() {
 }
 
 
-checkIDRXBalance();
 
 export async function checkGasFeeEstimation(
   amount: string,

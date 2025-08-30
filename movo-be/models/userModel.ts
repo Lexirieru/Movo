@@ -17,6 +17,11 @@ const UserDataSchema = new Schema(
       required : true,
       unique : true,
     },
+    hashedPassword : {
+      type: String,
+      required : true,
+      unique : true,
+    },
     fullname: {
       type: String,
       required: true,
@@ -137,6 +142,10 @@ export const GroupOfUserModel = mongoose.model(
 );
 
 const LoginSessionTokenSchema = new Schema({
+  _id : {
+    type: String,
+    required : true
+  },
   email: {
     type: String,
     required: true,
