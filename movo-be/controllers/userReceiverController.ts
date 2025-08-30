@@ -137,6 +137,7 @@ export async function withdrawFromIDRXtoIDR(req:Request, res: Response){
         if (!bankDirectory[bankName]) {
           return res.status(400).json({ message: "Invalid bankName" });
         }
+
         const { r_signature, r_METHOD, r_URL_ENDPOINT, r_timestamp, r_body } =
           generateSignatureForRedeem(
             txHash,
@@ -207,6 +208,8 @@ export async function withdrawFromIDRXtoIDR(req:Request, res: Response){
     return;
   }
 }
+
+
 // untuk nampilin all withdraw history 
 export async function loadAllWithdrawHistory(req: Request, res: Response) {
   const {_id} = req.body;

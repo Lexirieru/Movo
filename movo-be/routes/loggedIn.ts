@@ -2,6 +2,7 @@ import { addBankAccount, deleteBankAccount, getBankAccount, getOrganizationMembe
 
 import express, { RequestHandler } from "express";
 import { addReceiverToGroup } from "../controllers/userSenderController";
+
 const router = express.Router();
 
 type RouteMethod = "get" | "post" | "put" | "delete";
