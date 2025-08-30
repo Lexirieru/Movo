@@ -19,7 +19,6 @@ export default function App() {
     }
   }, [setFrameReady, isFrameReady]);
 
-  // State untuk mengelola loading dan animasi
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
