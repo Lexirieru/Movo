@@ -144,7 +144,8 @@ export default function ReceiverDashboard({ onDropdownOpen }: ReceiverDashboardP
                 </th>
                 <th className="text-left p-4 text-white/80 font-medium">Token</th>
                 <th className="text-left p-4 text-white/80 font-medium">Amount</th>
-                <th className="text-left p-4 text-white/80 font-medium">Bank/Wallet</th>
+                <th className="text-left p-4 text-white/80 font-medium">Bank/Chain</th>
+                <th className="text-left p-4 text-white/80 font-medium">Wallet Address / Bank Number</th>
                 <th className="text-left p-4 text-white/80 font-medium">Created At</th>
                 <th className="text-left p-4 text-white/80 font-medium">Actions</th>
               </tr>
@@ -161,7 +162,8 @@ export default function ReceiverDashboard({ onDropdownOpen }: ReceiverDashboardP
                   </td>
                   <td className="p-4 text-white">{w.originCurrency} </td>
                   <td className="p-4 text-white">{w.amount}</td>
-                  <td className="p-4 text-white">{w.bankName || w.walletAddress}</td>
+                  <td className="p-4 text-white">{w.bankName || w.networkChainId}</td>
+                  <td className="p-4 text-white">{w.bankAccountNumber || w.walletAddress}</td>
                   <td className="p-4 text-white">{w.createdAt.toLocaleDateString()}</td>
                   <td className="p-4">
                     <button
@@ -213,5 +215,9 @@ export default function ReceiverDashboard({ onDropdownOpen }: ReceiverDashboardP
         />
       )}
     </div>
+
+    
   );
+
+  
 }

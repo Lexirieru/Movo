@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X, DollarSign, Coins, CheckCircle, AlertTriangle, ArrowRight } from 'lucide-react';
 import { WithdrawHistory } from '@/types/historyTemplate';
+import { getUsdcIdrxRate } from '@/app/api/api';
+
 
 interface Stream {
   id: string;
@@ -20,6 +22,8 @@ export default function ClaimModal({ isOpen, onClose, selectedStreams, totalAmou
   const [claimType, setClaimType] = useState<'crypto' | 'fiat'>('crypto');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [rate, setRate] = useState(0);
+  const [usdcIdrxRate, setUsdcIdrxRate] = useState<number | null>(null);
 
   if (!isOpen) return null;
 
@@ -39,9 +43,32 @@ export default function ClaimModal({ isOpen, onClose, selectedStreams, totalAmou
     }, 2000);
   };
 
-  const exchangeRate = 15850; // IDR per IDRX (example rate)
-  const fiatAmount = totalAmount * exchangeRate;
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
 
+    const fetchRate = async () => {
+      try {
+        const tempRate =  await getUsdcIdrxRate();
+        console.log(tempRate.rate);
+        
+        setUsdcIdrxRate(tempRate.rate);
+      } catch (error) {
+        console.error("Failed to fetch USDC/IDRX rate:", error);
+      }
+    };
+
+    // fetch pertama kali saat modal dibuka
+    if (isOpen) {
+      fetchRate();
+      interval = setInterval(fetchRate, 10000); // ulang tiap 10 detik
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isOpen]);
+  
+  // const fiatAmount = totalAmount * rate;
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-slate-900/95 backdrop-blur-xl rounded-3xl border border-white/20 w-full max-w-md mx-auto shadow-2xl">
@@ -105,15 +132,21 @@ export default function ClaimModal({ isOpen, onClose, selectedStreams, totalAmou
                   <span className="text-white/60">You will receive:</span>
                   <span className="text-white/60 text-sm">{selectedStreams.length} stream(s)</span>
                 </div>
-                
+
                 {claimType === 'crypto' ? (
                   <div className="flex items-center space-x-3">
                     <div className="w-12 h-12 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-center">
                       <span className="text-white font-bold">I</span>
                     </div>
                     <div>
-                      <div className="text-2xl font-bold text-white">{totalAmount.toFixed(4)} IDRX</div>
-                      <div className="text-white/60 text-sm">≈ {fiatAmount.toLocaleString('id-ID')} IDR</div>
+                      <div className="text-2xl font-bold text-white">
+                        {totalAmount.toFixed(4)} IDRX
+                      </div>
+                      {usdcIdrxRate !== null && (
+                        <div className="text-white/60 text-sm">
+                          ≈ {(totalAmount * usdcIdrxRate).toLocaleString('id-ID')} IDR
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -122,12 +155,23 @@ export default function ClaimModal({ isOpen, onClose, selectedStreams, totalAmou
                       <DollarSign className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <div className="text-2xl font-bold text-white">Rp {fiatAmount.toLocaleString('id-ID')}</div>
-                      <div className="text-white/60 text-sm">From {totalAmount.toFixed(4)} IDRX</div>
+                      {usdcIdrxRate !== null ? (
+                        <>
+                          <div className="text-2xl font-bold text-white">
+                            Rp {(totalAmount * usdcIdrxRate).toLocaleString('id-ID')}
+                          </div>
+                          <div className="text-white/60 text-sm">
+                            From {totalAmount.toFixed(4)} IDRX
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-white/60 text-sm">Fetching rate...</div>
+                      )}
                     </div>
                   </div>
                 )}
               </div>
+
 
               {/* Stream Details */}
               <div className="space-y-3">
@@ -144,26 +188,24 @@ export default function ClaimModal({ isOpen, onClose, selectedStreams, totalAmou
                           {/* <div className="text-white/60 text-xs font-mono">{stream.}</div> */}
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-white font-medium">{stream.choice}</div>
-                      </div>
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* Warning for Fiat */}
-              {claimType === 'fiat' && (
+              {claimType === 'fiat' && usdcIdrxRate !== null && (
                 <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 flex items-start space-x-3">
                   <AlertTriangle className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
                   <div>
                     <div className="text-yellow-400 font-medium text-sm">Fiat Conversion</div>
                     <div className="text-white/60 text-sm mt-1">
-                      Tokens will be converted to IDR at current market rate (1 IDRX = Rp {exchangeRate.toLocaleString('id-ID')}) and transferred to your bank account.
+                      Tokens will be converted to IDR at current market rate (1 IDRX = Rp {usdcIdrxRate.toLocaleString('id-ID')}) and transferred to your bank account.
                     </div>
                   </div>
                 </div>
               )}
+
 
               {/* Action Buttons */}
               <div className="flex items-center space-x-3 pt-4">
@@ -202,5 +244,8 @@ export default function ClaimModal({ isOpen, onClose, selectedStreams, totalAmou
         )}
       </div>
     </div>
-  );
+  )
 }
+
+  
+  

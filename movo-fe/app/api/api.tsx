@@ -75,6 +75,17 @@ export const loadAllGroupTransactionHistory = async (_id : string) => {
   }  
 }
 
+export const getUsdcIdrxRate = async () => {
+  try{
+      const response = await api.post("/getIdrxRateFromUSDC")
+      console.log(response)
+      return response.data
+  }
+  catch(err){
+      console.log(err);
+  }
+}
+
 export const logout = async () => {
   const response = await api.post("/logout"); // backend akan hapus cookie
   return response.data.message;
