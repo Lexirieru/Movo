@@ -3,6 +3,7 @@ import "@coinbase/onchainkit/styles.css";
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
+import { UserProvider } from "@/lib/userContext";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -35,15 +36,13 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body className="bg-background">
-        <Providers>{children}</Providers>
+        <UserProvider>
+          <Providers>{children}</Providers>
+        </UserProvider>
       </body>
     </html>
   );

@@ -4,7 +4,11 @@ import SocialLogin from "./SocialLogin";
 import { Mail, Lock, User } from "lucide-react";
 import FormInput from "./FormInput";
 import { register } from "@/app/api/api";
+import { useRouter } from "next/router";
+import { useUser } from "@/lib/userContext";
 export default function RegisterForm() {
+  const router = useRouter();
+  const {setUser} = useUser();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -26,6 +30,8 @@ export default function RegisterForm() {
     setIsLoading(false);
     if(response.statusCode == 201){
       // kasih redirect ke halaman dashboard pengguna
+      setUser(response.json());
+      router.push("/dashboard");
     }
   };
 

@@ -1,10 +1,15 @@
+"use client"
 import { useState } from "react";
 import FormInput from "./FormInput";
 import SocialLogin from "./SocialLogin";
-import { Mail, Lock } from "lucide-react";
+import { Mail, Lock, Router } from "lucide-react";
 import SubmitButton from "./SubmitButton";
 import { login } from "@/app/api/api";
+import { useRouter } from "next/router";
+import { useUser } from "@/lib/userContext";
 export default function LoginForm() {
+  const {setUser} = useUser();
+  const router = useRouter();
   const [formData, setFormData] = useState({
     email: "",
     password: ""
@@ -23,6 +28,8 @@ export default function LoginForm() {
     await new Promise(resolve => setTimeout(resolve, 2000));
     setIsLoading(false);
     if(response.statusCode == 201){
+      setUser(response.json());
+      router.push("/dashboard")
       // kasih redirect ke halaman dashboard pengguna
     }
   };
