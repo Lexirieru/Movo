@@ -1,4 +1,4 @@
-export const bankDirectory: Record<string, string> = {
+export const bankDictionary: Record<string, string> = {
   "BANK BRI": "002",
   "BANK EKSPOR INDONESIA": "003",
   "BANK MANDIRI": "008",

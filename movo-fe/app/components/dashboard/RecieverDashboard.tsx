@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Search, Download, DollarSign, Clock, TrendingUp, CheckCircle2 } from 'lucide-react';
-import ClaimModal from './ClaimModal';
+import ClaimModal from './receiver/ClaimModal';
 import { useAuth } from '@/lib/userContext';
 import { loadAllWithdrawHistory } from '@/app/api/api';
 import { WithdrawHistory } from '@/types/historyTemplate';
@@ -130,10 +130,7 @@ export default function ReceiverDashboard({ onDropdownOpen }: ReceiverDashboardP
           />
         </div>
         
-        <button className="bg-white/10 backdrop-blur-sm border border-white/20 text-cyan-400 px-4 py-3 rounded-xl hover:bg-white/20 transition-all duration-300 flex items-center space-x-2">
-          <Download className="w-5 h-5" />
-          <span className="hidden sm:inline">Export CSV</span>
-        </button>
+        
       </div>
 
       {/* Table */}
