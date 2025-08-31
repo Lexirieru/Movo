@@ -29,7 +29,7 @@ export default function ReceiverDashboard({ onDropdownOpen }: ReceiverDashboardP
 
         const templatesWithdrawHistory: WithdrawHistory[] = historyTemplate.map(
           (w: any) => ({
-            withdrawId: w.withdrawId ?? "",
+            withdrawId: w.withdrawId,
             receiverId: w.receiverId,
             amount: w.amount,
             choice: w.choice,
@@ -77,8 +77,11 @@ export default function ReceiverDashboard({ onDropdownOpen }: ReceiverDashboardP
   };
 
   const totalSelectedAmount = filteredWithdraws
-    .filter(w => selectedWithdraws.includes(w.withdrawId ?? ""))
-    .reduce((acc, w) => acc + Number(w.amount), 0);
+  .filter(
+    (w) => !w.withdrawId && selectedWithdraws.includes(w.withdrawId ?? "")
+  )
+  .reduce((acc, w) => acc + Number(w.amount), 0);
+
 
   const handleClaim = () => {
     if (selectedWithdraws.length > 0) {
