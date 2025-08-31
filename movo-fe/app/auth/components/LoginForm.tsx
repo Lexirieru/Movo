@@ -5,8 +5,9 @@ import SocialLogin from "./SocialLogin";
 import { Mail, Lock, Router } from "lucide-react";
 import SubmitButton from "./SubmitButton";
 import { login } from "@/app/api/api";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation";
 import { useUser } from "@/lib/userContext";
+
 export default function LoginForm() {
   const {setUser} = useUser();
   const router = useRouter();
