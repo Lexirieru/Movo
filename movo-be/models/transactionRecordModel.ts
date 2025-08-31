@@ -44,7 +44,7 @@ const TransactionRecordSchema = new Schema(
         // in crypto
         amount : {
           type: String,
-          required : false,
+          required : true,
         },
         createdAt: {
           type: Date,
@@ -54,7 +54,7 @@ const TransactionRecordSchema = new Schema(
     ],
     totalReceiver: {
       type: Number,
-      required: false,
+      required: true,
     },
     blockNumber :  {
       type : String,
@@ -155,6 +155,11 @@ const WithdrawHistorySchema = new Schema(
       type: String,
       required: false,
     },
+    createdAt : {
+      type : String,
+      required : true,
+      default : Date.now 
+    }
   },
   {
     timestamps: true,

@@ -36,7 +36,7 @@ router.get(
             .json({ authenticated: false, message: "Invalid token" });
           return;
         } else {
-          res.json({message : "Successfully authenticated", authenticated : true});
+          res.json({user, message : "Successfully authenticated", authenticated : true});
           return;
         }
       } catch (err) {

@@ -5,6 +5,7 @@ import axios from "axios";
 import fs from "fs";
 import bcrypt from "bcrypt";
 import { generateCookiesToken } from "../routes/auth";
+import { TransactionRecordModel, WithdrawHistoryModel } from "../models/transactionRecordModel";
 
 const movoApiKey = process.env.IDRX_API_KEY!;
 const movoSecretKey = process.env.IDRX_SECRET_KEY!;
@@ -86,6 +87,49 @@ export async function onBoardingUser(req: Request, res: Response){
   }
 } 
 
+// export async function loadAllGroupPaymentAndWithdrawHistory(req: Request, res: Response) {
+//   const { _id } = req.body;
+
+//   try {
+//     // Ambil semua payment history
+//     const paymentHistories = await TransactionRecordModel.find({ senderId: _id })
+//       .sort({ timestamp: -1 })
+//       .lean();
+
+//     // Ambil semua withdraw history
+//     const withdrawHistories = await WithdrawHistoryModel.find({ receiverId: _id })
+//       .sort({ timestamp: -1 })
+//       .lean();
+
+//     // Samakan struktur data biar bisa digabung
+//     const normalizedPayments = paymentHistories.map((p) => ({
+//       ...p,
+//       historyType: "payment",
+//       createdAt: p.timestamp, // fallback ke createdAt kalau ada
+//     }));
+
+//     const normalizedWithdraws = withdrawHistories.map((w) => ({
+//       ...w,
+//       historyType: "withdraw",
+//       createdAt: w.createdAt,
+//     }));
+
+//     // Gabungkan
+//     const allHistories = [...normalizedPayments, ...normalizedWithdraws]
+//       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+
+//     res.status(200).json({
+//       message: "Payment and Withdraw history successfully loaded",
+//       data: allHistories,
+//     });
+//   } catch (err: any) {
+//     res.status(500).json({
+//       message: "Error loading payment and withdraw history",
+//       error: err.message,
+//     });
+//   }
+// }
 
 export async function addBankAccount(req : Request, res : Response){
   const {email, bankAccountNumber, bankCode} = req.body

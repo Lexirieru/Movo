@@ -1,53 +1,57 @@
 "use client";
+
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { getMe } from "@/utils/auth";
-import React, { createContext, useContext, useEffect, useState } from "react";
 
-type UserInfo = {
-  _id: string;
-  email: string;
-  companyId: string;
-  companyName: string;
-};
-
-type UserContextType = {
-  user: UserInfo | null;
+// tipe state auth
+interface AuthContextType {
+  user: any;
   loading: boolean;
-  setUser: React.Dispatch<React.SetStateAction<UserInfo | null>>; // supaya bisa update
-};
+  authenticated: boolean;
+  refreshUser: () => Promise<void>; // biar bisa reload user dari luar
+}
 
-const UserContext = createContext<UserContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const useUser = () => {
-  const context = useContext(UserContext);
-  if (!context) {
-    throw new Error("useUser must be used within a UserProvider");
-  }
-  return context;
-};
-
-export const UserProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<UserInfo | null>(null);
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  // cek auth pertama kali
+  const checkAuth = async () => {
+    setLoading(true);
+    const data = await getMe();
+    // console.log(data.user);
+    if (data && data.authenticated) {
+      // console.log(data.user)
+      setUser(data.user);
+    } else {
+      setUser(null);
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    const getUser = async () => {
-      try {
-        const userData = await getMe();
-        console.log("Fetched user:", userData);
-        setUser(userData);
-      } catch (error) {
-        console.error("User not logged in or session expired: ", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    getUser();
+    checkAuth();
   }, []);
 
-  return (
-    <UserContext.Provider value={{ user, loading, setUser }}>
-      {children}
-    </UserContext.Provider>
-  );
-};
+  const value: AuthContextType = {
+    user,
+    loading,
+    authenticated: !!user,
+    refreshUser: checkAuth,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+// Hook untuk konsumsi
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within AuthProvider");
+  }
+  return context;
+}

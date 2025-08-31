@@ -47,14 +47,36 @@ export const register = async (email : string, fullname : string, password : str
 }
 
 export const login = async (email : string, password : string) => {
-    try{
-        const response = await api.post("/login", {email, password});
-        console.log(response);
-        return response.data
-    }
-    catch(err){
-        console.log(err);
-    }  
+  try{
+      const response = await api.post("/login", {email, password});
+      console.log(response);
+      return response.data
+  }
+  catch(err){
+      console.log(err);
+  }  
+}
+
+export const loadAllWithdrawHistory = async (_id : string) => {
+  try{
+      const response = await api.post("/loadAllWithdrawHistory", {_id});
+      console.log(response.data.data);
+      return response.data.data
+  }
+  catch(err){
+      console.log(err);
+  }  
+}
+
+export const loadAllGroupPaymentHistory = async (_id : string) => {
+  try{
+      const response = await api.post("/loadAllGroupPaymentHistory", {_id});
+      console.log(response);
+      return response.data
+  }
+  catch(err){
+      console.log(err);
+  }  
 }
 
 export const logout = async () => {

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { X, DollarSign, Coins, CheckCircle, AlertTriangle, ArrowRight } from 'lucide-react';
+import { WithdrawHistory } from '@/types/historyTemplate';
 
 interface Stream {
   id: string;
@@ -11,7 +12,7 @@ interface Stream {
 interface ClaimModalProps {
   isOpen: boolean;
   onClose: () => void;
-  selectedStreams: Stream[];
+  selectedStreams: WithdrawHistory[];
   totalAmount: number;
 }
 
@@ -133,18 +134,18 @@ export default function ClaimModal({ isOpen, onClose, selectedStreams, totalAmou
                 <h4 className="text-white/80 font-medium">Claiming from:</h4>
                 <div className="space-y-2 max-h-32 overflow-y-auto">
                   {selectedStreams.map((stream) => (
-                    <div key={stream.id} className="bg-white/5 rounded-lg p-3 flex items-center justify-between">
+                    <div key={stream.withdrawId} className="bg-white/5 rounded-lg p-3 flex items-center justify-between">
                       <div className="flex items-center space-x-3">
                         <div className="w-6 h-6 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-center">
                           <span className="text-white text-xs font-bold">I</span>
                         </div>
                         <div>
-                          <div className="text-white text-sm">{stream.token}</div>
-                          <div className="text-white/60 text-xs font-mono">{stream.funder}</div>
+                          <div className="text-white text-sm">{stream.originCurrency}</div>
+                          {/* <div className="text-white/60 text-xs font-mono">{stream.}</div> */}
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-white font-medium">{stream.withdrawable}</div>
+                        <div className="text-white font-medium">{stream.choice}</div>
                       </div>
                     </div>
                   ))}
