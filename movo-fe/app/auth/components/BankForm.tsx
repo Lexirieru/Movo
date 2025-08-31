@@ -6,7 +6,7 @@ import SubmitButton from "./SubmitButton";
 import { addBankAccount } from "@/app/api/api";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/userContext";
-import { bankDirectory } from "@/lib/directory";
+import { bankDirectory } from "@/lib/dictionary";
 
 export default function BankForm() {
   const router = useRouter();
