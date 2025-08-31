@@ -3,6 +3,7 @@ import FormInput from "./FormInput";
 import SocialLogin from "./SocialLogin";
 import { Mail, Lock } from "lucide-react";
 import SubmitButton from "./SubmitButton";
+import { login } from "@/app/api/api";
 export default function LoginForm() {
   const [formData, setFormData] = useState({
     email: "",
@@ -17,8 +18,13 @@ export default function LoginForm() {
   const handleSubmit = async () => {
     setIsLoading(true);
     // Simulate API call
+    const response = await login(formData.email, formData.password)
+    console.log(response);
     await new Promise(resolve => setTimeout(resolve, 2000));
     setIsLoading(false);
+    if(response.statusCode == 201){
+      // kasih redirect ke halaman dashboard pengguna
+    }
   };
 
   return (

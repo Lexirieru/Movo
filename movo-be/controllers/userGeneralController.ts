@@ -12,7 +12,7 @@ const movoSecretKey = process.env.IDRX_SECRET_KEY!;
 // controller untuk MOVO
 
 export async function onBoardingUser(req: Request, res: Response){
-  const {email, fullname, password, idFile} = req.body;
+  const {email, fullname, password} = req.body;
 
   if(!email || !fullname){
     res.status(404).json({message: "Email and fullname are required!"})
@@ -21,7 +21,7 @@ export async function onBoardingUser(req: Request, res: Response){
   const saltRounds = 10; // default cukup 10, jangan terlalu tinggi biar ga lambat
   const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-  console.log(email, password, fullname, idFile)
+  console.log(email, password, fullname)
   const form = {
     email,
     fullname, 
@@ -139,6 +139,7 @@ export async function addBankAccount(req : Request, res : Response){
   }
 
 }
+
 export async function getBankAccount(req : Request, res : Response) {
   const {email} = req.body; 
   const path = "https://idrx.co/api/auth/get-bank-accounts";
