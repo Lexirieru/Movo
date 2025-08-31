@@ -1,54 +1,68 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Search, Download, Pause, X, Clock, AlertCircle, CheckCircle } from 'lucide-react';
+import { useAuth } from '@/lib/userContext';
+import { loadAllGroupTransactionHistory } from '@/app/api/api';
+import { TransactionHistory } from '@/types/historyTemplate';
 
-interface Stream {
-  id: string;
-  token: string;
-  tokenIcon: string;
-  recipient: string;
-  totalAmount: number;
-  totalSent: number;
-  withdrawable: number;
-  status: 'Active' | 'Paused' | 'Completed';
-  rate: number;
-}
 
 interface SenderDashboardProps {
   onDropdownOpen?: () => void;
 }
 
 export default function SenderDashboard({ onDropdownOpen }: SenderDashboardProps) {
-  const [searchTerm, setSearchTerm] = useState('');
-  
-  const streams: Stream[] = [
-    {
-      id: '1',
-      token: 'IDRX',
-      tokenIcon: '🇮🇩',
-      recipient: 'lexirieru.eth',
-      totalAmount: 100,
-      totalSent: 0,
-      withdrawable: 7.73,
-      status: 'Active',
-      rate: 3.33333
-    },
-    {
-      id: '2',
-      token: 'IDRX',
-      tokenIcon: '🇮🇩',
-      recipient: 'lexirieru.eth',
-      totalAmount: 100,
-      totalSent: 0,
-      withdrawable: 33.16,
-      status: 'Active',
-      rate: 14.28571
-    }
-  ];
 
-  const filteredStreams = streams.filter(stream =>
-    stream.recipient.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    stream.token.toLowerCase().includes(searchTerm.toLowerCase())
+  const { user, loading } = useAuth(); 
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedTransaction, setSelectedTransaction] = useState<string[]>([]);
+  const [hasFetched, setHasFetched] = useState(false);
+  const [transactionHistory, setTransactionHistory] = useState<TransactionHistory[]>([]);
+  
+  
+    useEffect(() => {
+      if (loading || !user?._id || hasFetched) return;
+  
+      const fetchTransactionHistory = async () => {
+        try {
+          const historyTemplate = await loadAllGroupTransactionHistory(user._id);
+  
+          const templatesTransactionHistory: TransactionHistory[] = historyTemplate.map(
+            (w: any) => ({
+              txId: w.txId,
+              txHash: w.txHash,
+              senderId: w.senderId,
+              senderName: w.senderName,
+              groupId: w.groupId,
+              originCurrency : w.originCurrency,
+              groupName: w.groupName,
+              totalAmount: w.totalAmount,
+              totalReceiver: w.totalReceiver,
+              blockNumber: w.blockNumber,
+              blockHash: w.blockHash,
+              from: w.from,
+              to: w.to,
+              status: w.status,
+              gasUsed: w.gasUsed,
+              gasPrice: w.gasPrice,
+              timeStamp: w.timeStamp,
+              createdAt: new Date(w.createdAt),
+            })
+          );
+          setTransactionHistory(templatesTransactionHistory);
+          setHasFetched(true);
+        } catch (err) {
+          console.error("Failed to fetch transaction history", err);
+        }
+      };
+  
+      fetchTransactionHistory();
+    }, [loading, user, hasFetched]);
+
+  // Filter by search
+  const filteredtransaction = transactionHistory.filter((w) =>
+    w.senderName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    w.originCurrency.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -119,54 +133,54 @@ export default function SenderDashboard({ onDropdownOpen }: SenderDashboardProps
                 <th className="text-left p-4 text-white/80 font-medium">Token</th>
                 <th className="text-left p-4 text-white/80 font-medium">Recipient</th>
                 <th className="text-left p-4 text-white/80 font-medium">Total Amount</th>
-                <th className="text-left p-4 text-white/80 font-medium">Total Sent</th>
-                <th className="text-left p-4 text-white/80 font-medium">Withdrawable</th>
-                <th className="text-left p-4 text-white/80 font-medium">Status</th>
+                {/* <th className="text-left p-4 text-white/80 font-medium">Total Sent</th> */}
+                {/* <th className="text-left p-4 text-white/80 font-medium">transactionable</th> */}
+                {/* <th className="text-left p-4 text-white/80 font-medium">Status</th> */}
                 <th className="text-left p-4 text-white/80 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredStreams.map((stream) => (
-                <tr key={stream.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+              {filteredtransaction.map((stream) => (
+                <tr key={stream.txId} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                   <td className="p-4">
                     <div className="flex items-center space-x-3">
                       <div className="w-8 h-8 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-center">
                         <span className="text-white text-xs font-bold">I</span>
                       </div>
-                      <span className="text-white font-medium">{stream.token}</span>
+                      <span className="text-white font-medium">{stream.originCurrency}</span>
                     </div>
                   </td>
                   <td className="p-4">
-                    <span className="text-white/80 font-mono text-sm">{stream.recipient}</span>
+                    <span className="text-white/80 font-mono text-sm">{stream.senderName}</span>
                   </td>
                   <td className="p-4">
                     <span className="text-white">{stream.totalAmount}</span>
                   </td>
-                  <td className="p-4">
-                    <span className="text-white">{stream.totalSent}</span>
-                  </td>
-                  <td className="p-4">
-                    <span className="text-white font-medium">{stream.withdrawable}</span>
-                  </td>
-                  <td className="p-4">
+                  {/* <td className="p-4">
+                    <span className="text-white">{stream.totalAmount}</span>
+                  </td> */}
+                  {/* <td className="p-4">
+                    <span className="text-white font-medium">{stream.transactionable}</span>
+                  </td> */}
+                  {/* <td className="p-4">
                     <div className="flex items-center space-x-2">
                       {getStatusIcon(stream.status)}
                       <span className="text-white/80 text-sm">
                         Sending {stream.rate}/day
                       </span>
                     </div>
-                  </td>
+                  </td> */}
                   <td className="p-4">
                     <div className="flex items-center space-x-2">
                       <button 
-                        onClick={() => handlePauseStream(stream.id)}
+                        onClick={() => handlePauseStream(stream.txId)}
                         className="bg-yellow-500/20 text-yellow-400 px-3 py-1.5 rounded-lg text-sm hover:bg-yellow-500/30 transition-colors flex items-center space-x-1"
                       >
                         <Pause className="w-3 h-3" />
                         <span>Pause</span>
                       </button>
                       <button 
-                        onClick={() => handleCancelStream(stream.id)}
+                        onClick={() => handleCancelStream(stream.txId)}
                         className="bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg text-sm hover:bg-red-500/30 transition-colors flex items-center space-x-1"
                       >
                         <X className="w-3 h-3" />
@@ -182,16 +196,16 @@ export default function SenderDashboard({ onDropdownOpen }: SenderDashboardProps
 
         {/* Mobile Cards */}
         <div className="lg:hidden space-y-4 p-4">
-          {filteredStreams.map((stream) => (
-            <div key={stream.id} className="bg-white/10 rounded-xl p-4 border border-white/10">
+          {filteredtransaction.map((stream) => (
+            <div key={stream.txId} className="bg-white/10 rounded-xl p-4 border border-white/10">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-center">
                     <span className="text-white font-bold">I</span>
                   </div>
                   <div>
-                    <div className="text-white font-medium">{stream.token}</div>
-                    <div className="text-white/60 text-sm font-mono">{stream.recipient}</div>
+                    <div className="text-white font-medium">{stream.originCurrency}</div>
+                    <div className="text-white/60 text-sm font-mono">{stream.senderName}</div>
                   </div>
                 </div>
                 <div className="flex items-center space-x-1">
@@ -204,26 +218,26 @@ export default function SenderDashboard({ onDropdownOpen }: SenderDashboardProps
                   <div className="text-white/60 text-xs mb-1">Total Amount</div>
                   <div className="text-white">{stream.totalAmount}</div>
                 </div>
-                <div>
-                  <div className="text-white/60 text-xs mb-1">Withdrawable</div>
-                  <div className="text-white font-medium">{stream.withdrawable}</div>
-                </div>
+                {/* <div>
+                  <div className="text-white/60 text-xs mb-1">transactionable</div>
+                  <div className="text-white font-medium">{stream.transactionable}</div>
+                </div> */}
               </div>
-              
+{/*               
               <div className="text-white/80 text-sm mb-4">
                 Sending {stream.rate}/day
               </div>
-              
+               */}
               <div className="flex items-center space-x-2">
                 <button 
-                  onClick={() => handlePauseStream(stream.id)}
+                  onClick={() => handlePauseStream(stream.txId)}
                   className="flex-1 bg-yellow-500/20 text-yellow-400 py-2 rounded-lg text-sm hover:bg-yellow-500/30 transition-colors flex items-center justify-center space-x-1"
                 >
                   <Pause className="w-4 h-4" />
                   <span>Pause</span>
                 </button>
                 <button 
-                  onClick={() => handleCancelStream(stream.id)}
+                  onClick={() => handleCancelStream(stream.txId)}
                   className="flex-1 bg-red-500/20 text-red-400 py-2 rounded-lg text-sm hover:bg-red-500/30 transition-colors flex items-center justify-center space-x-1"
                 >
                   <X className="w-4 h-4" />
@@ -234,7 +248,7 @@ export default function SenderDashboard({ onDropdownOpen }: SenderDashboardProps
           ))}
         </div>
         
-        {filteredStreams.length === 0 && (
+        {filteredtransaction.length === 0 && (
           <div className="text-center py-12">
             <div className="text-white/40 mb-2">No streams found</div>
             <div className="text-white/60 text-sm">Try adjusting your search terms or create a new stream</div>
@@ -243,7 +257,7 @@ export default function SenderDashboard({ onDropdownOpen }: SenderDashboardProps
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+      {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
         <div className="bg-gradient-to-br from-cyan-500/10 to-blue-600/10 backdrop-blur-sm rounded-2xl p-6 border border-cyan-500/20">
           <h3 className="text-cyan-300 text-sm font-medium mb-2">Active Streams</h3>
           <p className="text-white text-2xl font-bold">
@@ -267,7 +281,7 @@ export default function SenderDashboard({ onDropdownOpen }: SenderDashboardProps
           </p>
           <p className="text-white/60 text-sm mt-1">Total sending rate</p>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }

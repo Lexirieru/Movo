@@ -1,6 +1,6 @@
 import mongoose, { Schema} from "mongoose";
 
-const TransactionRecordSchema = new Schema(
+const TransactionHistorySchema = new Schema(
   {
     txId: {
       type: String,
@@ -23,6 +23,10 @@ const TransactionRecordSchema = new Schema(
       required: true,
     },
     groupName : {
+      type : String,
+      required : true
+    },
+    originCurrency : {
       type : String,
       required : true
     },
@@ -93,9 +97,9 @@ const TransactionRecordSchema = new Schema(
   },
 );
 
-export const TransactionRecordModel = mongoose.model(
-  "TransactionRecord",
-  TransactionRecordSchema
+export const TransactionHistoryModel = mongoose.model(
+  "TransactionHistory",
+  TransactionHistorySchema
 );
 
 const WithdrawHistorySchema = new Schema(

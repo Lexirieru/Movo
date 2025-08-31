@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { GroupOfUserModel, UserModel } from "../models/userModel"; // Pastikan path-nya benar
-import { TransactionRecordModel } from "../models/transactionRecordModel";
+import { TransactionHistoryModel } from "../models/transactionRecordModel";
 
 // const apiKey = process.env.IDRX_API_KEY!;
 // const secretKey = process.env.IDRX_SECRET_KEY!;
@@ -334,11 +334,11 @@ export async function deleteGroup(req: Request, res: Response){
 
 }
 // history tentang kapan dia ngebayar semua receivernya, berapa totalnya
-export async function loadAllGroupPaymentHistory(req: Request, res: Response){
+export async function loadAllGroupTransactionHistory(req: Request, res: Response){
   const {_id} = req.body;
 
   try {
-    const histories = await TransactionRecordModel.find({ senderId : _id})
+    const histories = await TransactionHistoryModel.find({ senderId : _id})
           .sort({ timestamp: -1 })
           .lean();
     res.status(201).json({
@@ -360,7 +360,7 @@ export async function loadDetailedReceiverPaymentHistory(req: Request, res: Resp
 
   try {
     // dapetin detail transaksi history ke masing masing receivernya pada satu transaksi group tertentu
-    const detailPaymentHistory = await TransactionRecordModel.findOne({senderId: _id, groupId, txId }) 
+    const detailPaymentHistory = await TransactionHistoryModel.findOne({senderId: _id, groupId, txId }) 
     if(!detailPaymentHistory){
       res.status(404).json({
         message : "Transaction history not found"

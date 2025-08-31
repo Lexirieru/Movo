@@ -1,7 +1,7 @@
 import { addBankAccount, deleteBankAccount, getBankAccount, getOrganizationMembers, onBoardingUser} from "../controllers/userGeneralController";
 
 import express, { RequestHandler } from "express";
-import { addReceiverToGroup, loadAllGroupPaymentHistory } from "../controllers/userSenderController";
+import { addReceiverToGroup, loadAllGroupTransactionHistory } from "../controllers/userSenderController";
 import { loadAllWithdrawHistory } from "../controllers/userReceiverController";
 
 const router = express.Router();
@@ -49,15 +49,10 @@ const routes: RouteDefinition[] = [
     path: "/addReceiverToGroup",
     action: addReceiverToGroup,
   },
-  // {
-  //   method: "post",
-  //   path: "/loadAllGroupPaymentAndWithdrawHistory",
-  //   action: loadAllGroupPaymentAndWithdrawHistory,
-  // },
   {
     method: "post",
-    path: "/loadAllGroupPaymentHistory",
-    action: loadAllGroupPaymentHistory,
+    path: "/loadAllGroupTransactionHistory",
+    action: loadAllGroupTransactionHistory,
   },
   {
     method: "post",

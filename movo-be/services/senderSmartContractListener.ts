@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
 import payrollAbi from "../abi/payrollABI.json";
 import dotenv from "dotenv";
-import { TransactionRecordModel } from "../models/transactionRecordModel";
+import { TransactionHistoryModel } from "../models/transactionRecordModel";
 import { GroupOfUserModel, UserModel } from "../models/userModel";
 
 dotenv.config();
@@ -54,6 +54,7 @@ export const senderListener = async () => {
       totalAmount : string,
       Receivers : string[],
       totalReceiver : number,
+      originCurrency,
       event
     ) => {
       console.log("📡 Event PayrollApproved detected:");
@@ -71,9 +72,10 @@ export const senderListener = async () => {
           .timestamp.toString();
         const receipt = await provider.getTransactionReceipt(event.transactionHash);
 
-        const transactionHistory = new TransactionRecordModel({
+        const transactionHistory = new TransactionHistoryModel({
           txId,
           senderId,
+          originCurrency,
           senderName,
           groupId,
           groupName,

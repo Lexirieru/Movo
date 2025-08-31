@@ -32,6 +32,7 @@ export interface TransactionHistory {
   gasUsed : string;
   gasPrice : string;
   timeStmap : string;
+  originCurrency : string;
 }
 
 export interface Receiver {

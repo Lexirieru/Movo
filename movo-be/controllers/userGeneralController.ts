@@ -5,7 +5,7 @@ import axios from "axios";
 import fs from "fs";
 import bcrypt from "bcrypt";
 import { generateCookiesToken } from "../routes/auth";
-import { TransactionRecordModel, WithdrawHistoryModel } from "../models/transactionRecordModel";
+import { TransactionHistoryModel, WithdrawHistoryModel } from "../models/transactionRecordModel";
 
 const movoApiKey = process.env.IDRX_API_KEY!;
 const movoSecretKey = process.env.IDRX_SECRET_KEY!;
@@ -92,7 +92,7 @@ export async function onBoardingUser(req: Request, res: Response){
 
 //   try {
 //     // Ambil semua payment history
-//     const paymentHistories = await TransactionRecordModel.find({ senderId: _id })
+//     const paymentHistories = await TransactionHistoryModel.find({ senderId: _id })
 //       .sort({ timestamp: -1 })
 //       .lean();
 

@@ -38,7 +38,6 @@ api.interceptors.request.use(
 export const register = async (email : string, fullname : string, password : string) => {
     try{
         const response = await api.post("/onBoardingUser", {email, fullname, password});
-        console.log(response);
         return response.data
     }
     catch(err){
@@ -49,7 +48,6 @@ export const register = async (email : string, fullname : string, password : str
 export const login = async (email : string, password : string) => {
   try{
       const response = await api.post("/login", {email, password});
-      console.log(response);
       return response.data
   }
   catch(err){
@@ -60,7 +58,6 @@ export const login = async (email : string, password : string) => {
 export const loadAllWithdrawHistory = async (_id : string) => {
   try{
       const response = await api.post("/loadAllWithdrawHistory", {_id});
-      console.log(response.data.data);
       return response.data.data
   }
   catch(err){
@@ -68,11 +65,10 @@ export const loadAllWithdrawHistory = async (_id : string) => {
   }  
 }
 
-export const loadAllGroupPaymentHistory = async (_id : string) => {
+export const loadAllGroupTransactionHistory = async (_id : string) => {
   try{
-      const response = await api.post("/loadAllGroupPaymentHistory", {_id});
-      console.log(response);
-      return response.data
+      const response = await api.post("/loadAllGroupTransactionHistory", {_id});
+      return response.data.data
   }
   catch(err){
       console.log(err);
