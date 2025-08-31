@@ -6,7 +6,7 @@ import SubmitButton from "./SubmitButton";
 import { addBankAccount } from "@/app/api/api";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/userContext";
-import { bankDirectory } from "@/lib/dictionary";
+import { bankDictionary } from "@/lib/dictionary";
 
 export default function BankForm() {
   const router = useRouter();
@@ -25,10 +25,10 @@ export default function BankForm() {
   const handleSubmit = async () => {
     setIsLoading(true);
     try {
-      console.log(user)
-      const bankCode = bankDirectory[formData.bankName];
+      const bankCode = bankDictionary[formData.bankName];
       const response = await addBankAccount(user.email, formData.bankAccountNumber, bankCode);
       await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log(response)
       console.log(response.data)
       if (response.data) {
         router.push("/dashboard");

@@ -4,7 +4,7 @@ import { WithdrawHistoryModel } from "../models/transactionRecordModel";
 import { generateSignatureForRedeem } from "../utils/generate_signature";
 import axios from "axios";
 import { burnIdrx } from "../utils/burnIdrx";
-import { bankDirectory } from "../utils/directory";
+import { bankDictionary } from "../utils/dictionary";
 
 const movoApiKey = process.env.IDRX_API_KEY!;
 const movoSecretKey = process.env.IDRX_SECRET_KEY!;
@@ -133,8 +133,8 @@ export async function withdrawFromIDRXtoIDR(req:Request, res: Response){
         console.log(txHash);
         
         // generate signature untuk redeem disini
-        const bankCode = bankDirectory[bankName];
-        if (!bankDirectory[bankName]) {
+        const bankCode = bankDictionary[bankName];
+        if (!bankDictionary[bankName]) {
           return res.status(400).json({ message: "Invalid bankName" });
         }
 

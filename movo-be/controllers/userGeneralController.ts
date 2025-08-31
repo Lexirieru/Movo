@@ -156,22 +156,24 @@ export async function addBankAccount(req : Request, res : Response){
         'idrx-api-ts' : timestamp,
       },
     });
-    // console.log('res.data: ');
-    console.log(resData.data.data);
-    console.log(user)
-    const bank = `${user.bankName}_${user.bankAccountNumber}`;
-    console.log(bank)
-    const hashBankAccountNumber = await sha256(bank).toString();
-    
+
+    // const bank = `${user.bankName}_${user.bankAccountNumber}`;
+    // console.log(bank)
+    // const hashBankAccountNumber = sha256(bank).toString();
+    console.log(resData.data.data)
+    console.log(resData.data.statusCode);
+
     const updatedUser = await UserModel.findOneAndUpdate({email}, {
       bankId : resData.data.data.id,
-      hashBankAccountNumber,
+      // hashBankAccountNumber,
       bankAccountNumber: resData.data.data.bankAccountNumber,
       bankAccountName: resData.data.data.bankAccountName,
       bankCode: resData.data.data.bankCode,
       bankName : resData.data.data.bankName,
       depositWalletAddress : resData.data.data.DepositWalletAddress.walletAddress,
     }, { new: true});
+
+    console.log(updatedUser)
 
     
     if(!updatedUser){
@@ -226,13 +228,11 @@ export async function deleteBankAccount(req : Request, res : Response) {
   }
   
   const user = await UserModel.findOne({email});
-  console.log(user)
   if(!user){
     res.status(404).json({message: "User not found"});
     return
   }
 
-  console.log(user.bankId)
   const path = `https://idrx.co/api/auth/delete-bank-account/${user.bankId}`;
   const bufferReq = Buffer.from("", "base64").toString("utf8");
   const timestamp = Math.round(new Date().getTime()).toString();
@@ -246,6 +246,7 @@ export async function deleteBankAccount(req : Request, res : Response) {
       "idrx-api-ts": timestamp,
     },
   });
+  console.log(resData)
 
     const updatedUser = await UserModel.findOneAndUpdate(
       { email },
@@ -257,6 +258,7 @@ export async function deleteBankAccount(req : Request, res : Response) {
           bankCode: "",
           bankName: "",
           depositWalletAddress: "",
+          // hashBankAccountNumber : "",
         }
       },
       { new: true }
@@ -321,15 +323,15 @@ export async function changeBankAccount(req: Request, res: Response) {
     });
 
     const newBankData = addRes.data.data;
-    const bank = `${newBankData.bankName}_${newBankData.bankAccountNumber}`;
-    const hashBankAccountNumber = await sha256(bank).toString();
+    // const bank = `${newBankData.bankName}_${newBankData.bankAccountNumber}`;
+    // const hashBankAccountNumber = await sha256(bank).toString();
     
     // 3. Update user with new bank info
     const updatedUser = await UserModel.findOneAndUpdate(
       { email },
       {
         bankId: newBankData.id,
-        hashBankAccountNumber: hashBankAccountNumber,
+        // hashBankAccountNumber,
         bankAccountNumber: newBankData.bankAccountNumber,
         bankAccountName: newBankData.bankAccountName,
         bankCode: newBankData.bankCode,
