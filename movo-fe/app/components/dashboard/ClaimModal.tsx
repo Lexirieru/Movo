@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { X, DollarSign, Coins, CheckCircle, AlertTriangle, ArrowRight } from 'lucide-react';
+import { X, DollarSign, Coins, CheckCircle, AlertTriangle, ArrowRight, CreditCard, Mail } from 'lucide-react';
 import { WithdrawHistory } from '@/types/historyTemplate';
 import { getUsdcIdrxRate } from '@/app/api/api';
+import FormInput from '@/app/auth/components/FormInput';
 
 
 interface Stream {
@@ -24,7 +25,30 @@ export default function ClaimModal({ isOpen, onClose, selectedStreams, totalAmou
   const [isSuccess, setIsSuccess] = useState(false);
   const [rate, setRate] = useState(0);
   const [usdcIdrxRate, setUsdcIdrxRate] = useState<number | null>(null);
+  const [editingStream, setEditingStream] = useState<null | any>(null);
+  const [bankForm, setBankForm] = useState({ bankName: "", bankAccountNumber: "" });
 
+  const handleOpenModal = (stream: any) => {
+    setEditingStream(stream);
+    setBankForm({
+      bankName: stream.bankName || "",
+      bankAccountNumber: stream.bankAccountNumber || "",
+    });
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setBankForm({ ...bankForm, [e.target.name]: e.target.value });
+  };
+
+  const handleConfirm = () => {
+    if (editingStream) {
+      // update state atau panggil API untuk simpan perubahan
+      editingStream.bankName = bankForm.bankName;
+      editingStream.bankAccountNumber = bankForm.bankAccountNumber;
+
+      setEditingStream(null); // close modal
+    }
+  };
   if (!isOpen) return null;
 
   const handleClaim = async () => {
@@ -192,6 +216,64 @@ export default function ClaimModal({ isOpen, onClose, selectedStreams, totalAmou
                   ))}
                 </div>
               </div>
+
+              <div className="space-y-3">
+                <h4 className="text-white/80 font-medium">Transferring to: IDR</h4>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {selectedStreams.map((stream) => (
+                    <div key={stream.withdrawId} className="bg-white/5 rounded-lg p-3 flex items-center justify-between">
+                      <span className="text-white text-sm">{`${stream.bankName} ${stream.bankAccountNumber} ${stream.bankAccountName}`}</span>
+                      <button
+                        className="text-cyan-400 text-sm underline"
+                        onClick={() => handleOpenModal(stream)}
+                      >
+                        Change bank
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Modal */}
+                {editingStream && (
+                  <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-slate-900/95 rounded-2xl border border-white/20 p-6 w-full max-w-md">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-white font-bold text-lg">Change Bank</h3>
+                        <button onClick={() => setEditingStream(null)} className="text-white/60 hover:text-white">
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+
+                      <FormInput
+                        type="text"
+                        name="bankName"
+                        placeholder="Bank Name"
+                        value={bankForm.bankName}
+                        onChange={handleChange}
+                        icon={Mail}
+                        required
+                      />
+                      <FormInput
+                        type="text"
+                        name="bankAccountNumber"
+                        placeholder="Bank Account Number"
+                        value={bankForm.bankAccountNumber}
+                        onChange={handleChange}
+                        icon={CreditCard}
+                        required
+                      />
+
+                      <button
+                        onClick={handleConfirm}
+                        className="mt-4 w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 rounded-xl font-medium hover:shadow-lg"
+                      >
+                        Confirm
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
 
               {/* Warning for Fiat */}
               {claimType === 'fiat' && usdcIdrxRate !== null && (

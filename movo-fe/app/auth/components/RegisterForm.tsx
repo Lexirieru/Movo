@@ -29,7 +29,7 @@ export default function RegisterForm() {
     console.log(response);
     if(response.statusCode == 200){
       // kasih redirect ke halaman dashboard pengguna
-      router.push("/dashboard");
+      router.push("/inputBankData");
     }
   };
 

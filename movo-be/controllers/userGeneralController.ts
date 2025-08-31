@@ -5,12 +5,9 @@ import axios from "axios";
 import fs from "fs";
 import bcrypt from "bcrypt";
 import { generateCookiesToken } from "../routes/auth";
-import { TransactionHistoryModel, WithdrawHistoryModel } from "../models/transactionRecordModel";
 
 const movoApiKey = process.env.IDRX_API_KEY!;
 const movoSecretKey = process.env.IDRX_SECRET_KEY!;
-
-// controller untuk MOVO
 
 export async function onBoardingUser(req: Request, res: Response){
   const {email, fullname, password} = req.body;

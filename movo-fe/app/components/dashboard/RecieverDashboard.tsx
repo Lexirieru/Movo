@@ -29,12 +29,12 @@ export default function ReceiverDashboard({ onDropdownOpen }: ReceiverDashboardP
 
         const templatesWithdrawHistory: WithdrawHistory[] = historyTemplate.map(
           (w: any) => ({
-            withdrawId: w.withdrawId,
+            withdrawId: w.withdrawId ?? "",
             receiverId: w.receiverId,
             amount: w.amount,
             choice: w.choice,
             originCurrency: w.originCurrency,
-            targetCurrency: w.targetCurrency,
+            targetCurrency: w.targetCurrency ?? "",
             networkChainId: w.networkChainId ?? "",
             walletAddress: w.walletAddress ?? "",
             depositWalletAddress: w.depositWalletAddress ?? "",
@@ -42,7 +42,6 @@ export default function ReceiverDashboard({ onDropdownOpen }: ReceiverDashboardP
             bankName: w.bankName ?? "",
             bankAccountName: w.bankAccountName ?? "",
             bankAccountNumber: w.bankAccountNumber ?? "",
-            createdAt: new Date(w.createdAt),
           })
         );
         setWithdrawHistory(templatesWithdrawHistory);
@@ -58,7 +57,7 @@ export default function ReceiverDashboard({ onDropdownOpen }: ReceiverDashboardP
   // Filter by search
   const filteredWithdraws = withdrawHistory.filter((w) =>
     w.bankName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    w.choice.toLowerCase().includes(searchTerm.toLowerCase())
+    w.choice?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleSelectWithdraw = (withdrawId: string) => {
@@ -73,12 +72,12 @@ export default function ReceiverDashboard({ onDropdownOpen }: ReceiverDashboardP
     if (selectedWithdraws.length === filteredWithdraws.length) {
       setSelectedWithdraws([]);
     } else {
-      setSelectedWithdraws(filteredWithdraws.map(w => w.withdrawId));
+      setSelectedWithdraws(filteredWithdraws.map(w => w.withdrawId ?? ""));
     }
   };
 
   const totalSelectedAmount = filteredWithdraws
-    .filter(w => selectedWithdraws.includes(w.withdrawId))
+    .filter(w => selectedWithdraws.includes(w.withdrawId ?? ""))
     .reduce((acc, w) => acc + Number(w.amount), 0);
 
   const handleClaim = () => {
@@ -92,9 +91,9 @@ export default function ReceiverDashboard({ onDropdownOpen }: ReceiverDashboardP
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-white mb-2">Withdraw History</h2>
+          <h2 className="text-2xl font-bold text-white mb-2">Total Fixed Stream</h2>
           <p className="text-white/60">
-            View and manage your withdraw requests.
+            Manage your withdraw requests and view your history.
           </p>
         </div>
         
@@ -146,7 +145,8 @@ export default function ReceiverDashboard({ onDropdownOpen }: ReceiverDashboardP
                 <th className="text-left p-4 text-white/80 font-medium">Amount</th>
                 <th className="text-left p-4 text-white/80 font-medium">Bank/Chain</th>
                 <th className="text-left p-4 text-white/80 font-medium">Wallet Address / Bank Number</th>
-                <th className="text-left p-4 text-white/80 font-medium">Created At</th>
+                <th className="text-left p-4 text-white/80 font-medium">Transaction ID </th>
+                <th className="text-left p-4 text-white/80 font-medium">Type </th>
                 <th className="text-left p-4 text-white/80 font-medium">Actions</th>
               </tr>
             </thead>
@@ -154,28 +154,37 @@ export default function ReceiverDashboard({ onDropdownOpen }: ReceiverDashboardP
               {filteredWithdraws.map((w) => (
                 <tr key={w.withdrawId}>
                   <td className="p-4">
+                    {!w.withdrawId ? (
                     <input
                       type="checkbox"
-                      checked={selectedWithdraws.includes(w.withdrawId)}
-                      onChange={() => handleSelectWithdraw(w.withdrawId)}
+                      checked={selectedWithdraws.includes(w.withdrawId ?? "")}
+                      onChange={() => handleSelectWithdraw(w.withdrawId ?? "")}
                     />
+                  ) : (
+                    <span className="text-white/40 text-sm">-</span>
+                  )}
                   </td>
                   <td className="p-4 text-white">{w.originCurrency} </td>
                   <td className="p-4 text-white">{w.amount}</td>
-                  <td className="p-4 text-white">{w.bankName || w.networkChainId}</td>
-                  <td className="p-4 text-white">{w.bankAccountNumber || w.walletAddress}</td>
-                  <td className="p-4 text-white">{w.createdAt.toLocaleDateString()}</td>
+                  <td className="p-4 text-white">{w.bankName || w.networkChainId || "-" }</td>
+                  <td className="p-4 text-white">{w.bankAccountNumber || w.walletAddress || "-"}</td>
+                  <td className="p-4 text-white">{w.withdrawId || "-"}</td>
+                  <td className="p-4 text-white">{w.choice || "-"}</td>
                   <td className="p-4">
+                  {!w.withdrawId ? (
                     <button
                       onClick={() => {
-                        setSelectedWithdraws([w.withdrawId]);
+                        setSelectedWithdraws([w.withdrawId ?? ""]);
                         setShowClaimModal(true);
                       }}
                       className="bg-green-500/20 text-green-400 px-3 py-1.5 rounded-lg text-sm"
                     >
                       Claim
                     </button>
-                  </td>
+                  ) : (
+                    <span className="text-white/40 text-sm">Withdraw Completed</span>
+                  )}
+                </td>   
                 </tr>
               ))}
             </tbody>
@@ -210,7 +219,7 @@ export default function ReceiverDashboard({ onDropdownOpen }: ReceiverDashboardP
             setShowClaimModal(false);
             setSelectedWithdraws([]);
           }}
-          selectedStreams={withdrawHistory.filter(w => selectedWithdraws.includes(w.withdrawId))}
+          selectedStreams={withdrawHistory.filter(w => selectedWithdraws.includes(w.withdrawId ?? ""))}
           totalAmount={totalSelectedAmount}
         />
       )}

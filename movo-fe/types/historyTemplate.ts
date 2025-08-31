@@ -1,10 +1,10 @@
 export interface WithdrawHistory {
-  withdrawId: string;
+  withdrawId?: string;
   receiverId: string;
   amount: string;
-  choice: string;
+  choice?: string;
   originCurrency: string;
-  targetCurrency: string; 
+  targetCurrency?: string; 
   networkChainId?: string; 
   walletAddress?: string;
   depositWalletAddress?: string;
@@ -12,8 +12,8 @@ export interface WithdrawHistory {
   bankName?: string; 
   bankAccountName?: string; 
   bankAccountNumber?: string; 
-  createdAt : Date
 }
+
 export interface TransactionHistory {
   txId: string;
   txHash: string;
