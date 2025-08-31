@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import {LoginSessionTokenModel, UserModel } from "../models/userModel"; // Pastikan path-nya benar
+import { UserModel } from "../models/userModel"; // Pastikan path-nya benar
 import { createSignature } from "../utils/generate_signature";
 import axios from "axios";
 import fs from "fs";
@@ -73,8 +73,9 @@ export async function onBoardingUser(req: Request, res: Response){
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 hari
     });
     
-    res.status(201).json({
-      data : resData.data
+    res.status(200).json({
+      message: "Login successful",
+      statusCode : 200,
     });
     return
   }
@@ -84,6 +85,7 @@ export async function onBoardingUser(req: Request, res: Response){
     return
   }
 } 
+
 
 export async function addBankAccount(req : Request, res : Response){
   const {email, bankAccountNumber, bankCode} = req.body
@@ -220,6 +222,7 @@ export async function deleteBankAccount(req : Request, res : Response) {
   console.log("berhasil hapus bankAccount")
   return;
 }
+
 // controller untuk admin MOVO 
 export async function getOrganizationMembers(req: Request, res: Response) {
   const path = "https://idrx.co/api/auth/members";
@@ -246,6 +249,7 @@ export async function getOrganizationMembers(req: Request, res: Response) {
     return
   }
 }
+
 // buat controller untuk ngasih akses ke FE biar bisa akses status berdasarkan txIdnya
 export async function loadTransactionStatusData(
   txHash: string,

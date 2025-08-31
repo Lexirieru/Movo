@@ -5,11 +5,9 @@ import { Mail, Lock, User } from "lucide-react";
 import FormInput from "./FormInput";
 import { register } from "@/app/api/api";
 import { useRouter } from "next/navigation";
-import { useUser } from "@/lib/userContext";
 
 export default function RegisterForm() {
   const router = useRouter();
-  const {setUser} = useUser();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -26,12 +24,11 @@ export default function RegisterForm() {
     setIsLoading(true);
     // Simulate API call
     const response = await register(formData.email, formData.name,  formData.password)
-    console.log(response);
     await new Promise(resolve => setTimeout(resolve, 2000));
     setIsLoading(false);
-    if(response.statusCode == 201){
+    console.log(response);
+    if(response.statusCode == 200){
       // kasih redirect ke halaman dashboard pengguna
-      setUser(response.json());
       router.push("/dashboard");
     }
   };

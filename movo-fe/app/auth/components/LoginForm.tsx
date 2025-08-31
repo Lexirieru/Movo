@@ -6,10 +6,8 @@ import { Mail, Lock, Router } from "lucide-react";
 import SubmitButton from "./SubmitButton";
 import { login } from "@/app/api/api";
 import { useRouter } from "next/navigation";
-import { useUser } from "@/lib/userContext";
 
 export default function LoginForm() {
-  const {setUser} = useUser();
   const router = useRouter();
   const [formData, setFormData] = useState({
     email: "",
@@ -25,11 +23,10 @@ export default function LoginForm() {
     setIsLoading(true);
     // Simulate API call
     const response = await login(formData.email, formData.password)
-    console.log(response);
     await new Promise(resolve => setTimeout(resolve, 2000));
     setIsLoading(false);
-    if(response.statusCode == 201){
-      setUser(response.json());
+    console.log(response.statusCode);
+    if(response.statusCode == 200){
       router.push("/dashboard")
       // kasih redirect ke halaman dashboard pengguna
     }

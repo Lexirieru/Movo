@@ -3,7 +3,7 @@ import { generateToken } from "../config/generateToken";
 import jwt from "jsonwebtoken";
 import { LoginSessionTokenModel, UserModel } from "../models/userModel";
 import bcrypt from "bcrypt";
-
+import crypto from "crypto";
 const router: Router = express.Router();
 
 router.get(
@@ -64,10 +64,12 @@ router.post(
         res.status(404).json({ message: "Account with specified email is not found" });
         return;
       }
+      console.log(user);
 
       const isPasswordValid = await bcrypt.compare(password, user.hashedPassword);
 
       if (!isPasswordValid) {
+        console.log(password)
         res.status(401).json({ message: "Invalid password" });
         return;
       }
@@ -82,6 +84,7 @@ router.post(
       });
 
       res.status(200).json({
+        statusCode : 200,
         message: "Login successful",
       });
 
@@ -98,12 +101,13 @@ router.post(
 
 export async function generateCookiesToken(email : string, newUser : InstanceType<typeof UserModel>, ){
   const token = generateToken({
+    randomSeed: crypto.randomBytes(16).toString("hex"), 
     _id: newUser._id.toString(),
     email: newUser.email,
   });
 
   const tokenSession = new LoginSessionTokenModel({
-    _id : newUser._id.toString(),
+    userId : newUser._id.toString(),
     email,
     token,
   });

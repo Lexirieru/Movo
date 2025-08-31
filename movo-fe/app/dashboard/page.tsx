@@ -5,11 +5,15 @@ import { ChevronDown, Wallet, ArrowLeftRight } from 'lucide-react';
 import SenderDashboard from '../components/dashboard/SenderDashboard';
 import ReceiverDashboard from '../components/dashboard/RecieverDashboard';
 import Image from 'next/image';
-import { useUser } from '@/lib/userContext';
+import { useAuth } from '@/utils/authGuard';
 
 export default function DashboardPage() {
-  const { user, loading, setUser } = useUser();
+  const { user, loading, authenticated } = useAuth(true); 
+  // `true` artinya halaman ini butuh proteksi
+
   if (loading) return <p>Loading...</p>;
+
+  
   console.log(user)
   // Mock wallets for testing - nanti bisa diganti dengan wallet connection
   const mockWallets = [
@@ -35,6 +39,7 @@ export default function DashboardPage() {
     setConnectedWallet(walletAddress);
     setShowWalletDropdown(false);
   };
+  
   
   return (
     <section className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black">

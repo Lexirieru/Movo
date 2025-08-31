@@ -142,8 +142,8 @@ export const GroupOfUserModel = mongoose.model(
 );
 
 const LoginSessionTokenSchema = new Schema({
-  _id : {
-    type: String,
+  userId : {
+    type : String,
     required : true
   },
   email: {
