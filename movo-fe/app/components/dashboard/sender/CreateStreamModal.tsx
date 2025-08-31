@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { X, Search } from "lucide-react";
+import { TransactionHistory } from "@/types/historyTemplate";
 
 interface Token {
   address: string;
@@ -10,19 +11,11 @@ interface Token {
   balance: number;
 }
 
-interface NewStream {
-  id: string;
-  token: string;
-  tokenIcon: string;
-  recipient: string;
-  totalAmount: number;
-  totalSent: number;
-}
 
 interface CreateStreamModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreateStream: (stream: NewStream) => void;
+  onCreateStream: (stream: TransactionHistory) => void;
 }
 
 interface FormData {
@@ -104,13 +97,12 @@ export default function CreateStreamModal({
     if (!formData.token || !formData.receiverAddress || !formData.amount)
       return;
     
-    const newStream: NewStream = {
-      id: Date.now().toString(),
-      token: formData.token.symbol,
+    const newStream: TransactionHistory = {
+      txId: Date.now().toString(),
+      originCurrency: formData.token.address,
       tokenIcon: formData.token.icon,
-      recipient: formData.receiverAddress,
-      totalAmount: parseFloat(formData.amount),
-      totalSent: 0,
+      depositWalletAddress: formData.receiverAddress,
+      totalAmount: parseFloat(formData.amount).toString(),
     };
     onCreateStream(newStream);
     onClose();

@@ -34,6 +34,8 @@ export interface TransactionHistory {
   gasPrice : string;
   timeStmap : string;
   originCurrency : string;
+  depositWalletAddress?: string;
+  tokenIcon? : string;
 }
 
 export interface Receiver {

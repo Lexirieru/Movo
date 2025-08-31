@@ -28,8 +28,8 @@ export default function BankForm() {
       const bankCode = bankDirectory[formData.bankName];
       const response = await addBankAccount(user.email, formData.bankAccountNumber, bankCode);
       await new Promise(resolve => setTimeout(resolve, 2000));
-      console.log(response)
-      if (response.data.data.bankAccountName) {
+      console.log(response.data)
+      if (response.data) {
         router.push("/dashboard");
       } else {
         alert("Login failed, invalid bank account");

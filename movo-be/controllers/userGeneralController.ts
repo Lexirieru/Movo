@@ -209,6 +209,61 @@ export async function getBankAccount(req : Request, res : Response) {
   return;
 }
 
+// acuannya adalah bankId (bankId adalah id yang digenerate oleh idrx setiap selesai adding bank accounts)
+export async function deleteBankAccount(req : Request, res : Response) {
+  const {email} = req.body; 
+  if(!email){
+    res.status(404).json("Missing email");
+    return;
+  }
+  
+  const user = await UserModel.findOne({email});
+  console.log(user)
+  if(!user){
+    res.status(404).json({message: "User not found"});
+    return
+  }
+
+  console.log(user.bankId)
+  const path = `https://idrx.co/api/auth/delete-bank-account/${user.bankId}`;
+  const bufferReq = Buffer.from("", "base64").toString("utf8");
+  const timestamp = Math.round(new Date().getTime()).toString();
+  const sig = createSignature("DELETE", path, bufferReq, timestamp, user.secretKey);
+
+  const resData = await axios.delete(path, {
+    headers: {
+      "Content-Type": "application/json",
+      "idrx-api-key": user.apiKey,
+      "idrx-api-sig": sig,
+      "idrx-api-ts": timestamp,
+    },
+  });
+
+    const updatedUser = await UserModel.findOneAndUpdate(
+      { email },
+      {
+        $unset: {
+          bankId: "",
+          bankAccountNumber: "",
+          bankAccountName: "",
+          bankCode: "",
+          bankName: "",
+          depositWalletAddress: "",
+        }
+      },
+      { new: true }
+    );
+
+    if(!updatedUser){
+      res.status(404).json({message: "User not found"});
+      return
+    }
+
+    res.status(201).json({message : "Successfully delete bankAccounts", data :resData.data});
+    
+  console.log("berhasil hapus bankAccount")
+  return;
+}
 
 // acuannya adalah bankId (bankId adalah id yang digenerate oleh idrx setiap selesai adding bank accounts)
 export async function changeBankAccount(req: Request, res: Response) {
