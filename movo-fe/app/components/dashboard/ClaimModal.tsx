@@ -140,7 +140,7 @@ export default function ClaimModal({ isOpen, onClose, selectedStreams, totalAmou
                     </div>
                     <div>
                       <div className="text-2xl font-bold text-white">
-                        {totalAmount.toFixed(4)} IDRX
+                        {`${totalAmount.toFixed(4)} USDC` } 
                       </div>
                       {usdcIdrxRate !== null && (
                         <div className="text-white/60 text-sm">
@@ -161,7 +161,7 @@ export default function ClaimModal({ isOpen, onClose, selectedStreams, totalAmou
                             Rp {(totalAmount * usdcIdrxRate).toLocaleString('id-ID')}
                           </div>
                           <div className="text-white/60 text-sm">
-                            From {totalAmount.toFixed(4)} IDRX
+                            From {totalAmount.toFixed(4)} USDC
                           </div>
                         </>
                       ) : (
