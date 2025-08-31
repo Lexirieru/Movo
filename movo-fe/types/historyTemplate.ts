@@ -19,6 +19,7 @@ export interface TransactionHistory {
   txHash: string;
   senderId: string;
   senderName: string;
+  receiverName : string;
   groupId: string;
   groupName: string; 
   totalAmount: string;

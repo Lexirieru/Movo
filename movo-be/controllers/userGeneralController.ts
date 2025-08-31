@@ -208,60 +208,76 @@ export async function getBankAccount(req : Request, res : Response) {
   res.status(401).json({data : resData.data});
   return;
 }
+
+
 // acuannya adalah bankId (bankId adalah id yang digenerate oleh idrx setiap selesai adding bank accounts)
-export async function deleteBankAccount(req : Request, res : Response) {
-  const {email} = req.body; 
-  if(!email){
-    res.status(404).json("Missing email");
+export async function changeBankAccount(req: Request, res: Response) {
+  const { email, bankAccountNumber, bankCode } = req.body;
+
+  if (!email || !bankAccountNumber || !bankCode) {
+    res.status(400).json({ message: "Missing required fields" });
     return;
   }
-  
-  const user = await UserModel.findOne({email});
-  console.log(user)
-  if(!user){
-    res.status(404).json({message: "User not found"});
-    return
+
+  const user = await UserModel.findOne({ email });
+  if (!user) {
+    res.status(404).json({ message: "User not found" });
+    return;
   }
 
-  console.log(user.bankId)
-  const path = `https://idrx.co/api/auth/delete-bank-account/${user.bankId}`;
-  const bufferReq = Buffer.from("", "base64").toString("utf8");
   const timestamp = Math.round(new Date().getTime()).toString();
-  const sig = createSignature("DELETE", path, bufferReq, timestamp, user.secretKey);
 
-  const resData = await axios.delete(path, {
-    headers: {
-      "Content-Type": "application/json",
-      "idrx-api-key": user.apiKey,
-      "idrx-api-sig": sig,
-      "idrx-api-ts": timestamp,
-    },
-  });
+  try {
+    // 1. Delete existing bank account if exists
+    if (user.bankId) {
+      const deletePath = `https://idrx.co/api/auth/delete-bank-account/${user.bankId}`;
+      const deleteSig = createSignature("DELETE", deletePath, "", timestamp, user.secretKey!);
 
+      await axios.delete(deletePath, {
+        headers: {
+          "Content-Type": "application/json",
+          "idrx-api-key": user.apiKey!,
+          "idrx-api-sig": deleteSig,
+          "idrx-api-ts": timestamp,
+        },
+      });
+    }
+
+    // 2. Add new bank account
+    const addPath = "https://idrx.co/api/auth/add-bank-account";
+    const form = { bankAccountNumber, bankCode };
+    const addSig = createSignature("POST", addPath, Buffer.from(JSON.stringify(form), "base64").toString("utf8"), timestamp, user.secretKey!);
+
+    const addRes = await axios.post(addPath, form, {
+      headers: {
+        "Content-Type": "application/json",
+        "idrx-api-key": user.apiKey!,
+        "idrx-api-sig": addSig,
+        "idrx-api-ts": timestamp,
+      },
+    });
+
+    const newBankData = addRes.data.data;
+
+    // 3. Update user with new bank info
     const updatedUser = await UserModel.findOneAndUpdate(
       { email },
       {
-        $unset: {
-          bankId: "",
-          bankAccountNumber: "",
-          bankAccountName: "",
-          bankCode: "",
-          bankName: "",
-          depositWalletAddress: "",
-        }
+        bankId: newBankData.id,
+        bankAccountNumber: newBankData.bankAccountNumber,
+        bankAccountName: newBankData.bankAccountName,
+        bankCode: newBankData.bankCode,
+        bankName: newBankData.bankName,
+        depositWalletAddress: newBankData.DepositWalletAddress.walletAddress,
       },
       { new: true }
     );
 
-    if(!updatedUser){
-      res.status(404).json({message: "User not found"});
-      return
-    }
-
-    res.status(201).json({message : "Successfully delete bankAccounts", data :resData.data});
-    
-  console.log("berhasil hapus bankAccount")
-  return;
+    res.status(200).json({ message: "Bank account changed successfully", data: updatedUser });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to change bank account", error: err });
+  }
 }
 
 // controller untuk admin MOVO 

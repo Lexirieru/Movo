@@ -4,6 +4,8 @@ interface ErrorResponse {
   message?: string;
 }
 
+
+
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
   withCredentials: true,
@@ -58,6 +60,17 @@ export const login = async (email : string, password : string) => {
 export const addBankAccount = async (email : string, bankAccountNumber : string, bankCode: string) => {
   try{
       const response = await api.post("/addBankAccount", {email, bankAccountNumber, bankCode});
+      console.log(response)
+      return response.data
+  }
+  catch(err){
+      console.log(err);
+  }  
+}
+
+export const changeBankAccount = async (email : string, bankAccountNumber : string, bankCode: string) => {
+  try{
+      const response = await api.post("/changeBankAccount", {email, bankAccountNumber, bankCode});
       console.log(response)
       return response.data
   }

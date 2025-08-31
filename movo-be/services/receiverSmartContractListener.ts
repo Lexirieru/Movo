@@ -135,6 +135,7 @@ export const receiverListener = async () => {
     async (
       withdrawId : string,
       receiverId: string,
+      receiverName : string,
       amount: string,
       choice : string,
       originCurrency: string,
@@ -153,6 +154,7 @@ export const receiverListener = async () => {
       console.log({
         withdrawId,
         receiverId,
+        receiverName,
         amount,
         choice,
         originCurrency,
@@ -173,6 +175,7 @@ export const receiverListener = async () => {
           const withdrawHistory = new WithdrawHistoryModel({
             withdrawId,
             receiverId,
+            receiverName,
             amount,
             choice,
             originCurrency,

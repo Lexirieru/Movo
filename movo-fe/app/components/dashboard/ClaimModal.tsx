@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { X, DollarSign, Coins, CheckCircle, AlertTriangle, ArrowRight, CreditCard, Mail } from 'lucide-react';
 import { WithdrawHistory } from '@/types/historyTemplate';
-import { getUsdcIdrxRate } from '@/app/api/api';
+import { changeBankAccount, getUsdcIdrxRate } from '@/app/api/api';
 import FormInput from '@/app/auth/components/FormInput';
 import { useAuth } from '@/lib/userContext';
+import { bankDirectory } from '@/lib/directory';
 
 
 interface Stream {
@@ -42,13 +43,26 @@ export default function ClaimModal({ isOpen, onClose, selectedStreams, totalAmou
     setBankForm({ ...bankForm, [e.target.name]: e.target.value });
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (editingStream) {
       // update state atau panggil API untuk simpan perubahan
       editingStream.bankName = bankForm.bankName;
       editingStream.bankAccountNumber = bankForm.bankAccountNumber;
-
       setEditingStream(null); // close modal
+    }
+    // email, bankaccountnumber, bankcode
+    const bankCode = bankDirectory[bankForm.bankName]
+    try {
+      const response = await changeBankAccount(user.email, bankForm.bankAccountNumber, bankCode);
+      // Cek apakah berhasil
+      if (response.data) {
+        console.log("Bank account changed successfully", response.data);
+        // Bisa redirect atau update state user di frontend
+      } else {
+        console.error("Failed to change bank account", response.data);
+      }
+    } catch (error) {
+      console.error("Error changing bank account", error);
     }
   };
   if (!isOpen) return null;
