@@ -3,6 +3,7 @@ import { X, DollarSign, Coins, CheckCircle, AlertTriangle, ArrowRight, CreditCar
 import { WithdrawHistory } from '@/types/historyTemplate';
 import { getUsdcIdrxRate } from '@/app/api/api';
 import FormInput from '@/app/auth/components/FormInput';
+import { useAuth } from '@/lib/userContext';
 
 
 interface Stream {
@@ -20,6 +21,7 @@ interface ClaimModalProps {
 }
 
 export default function ClaimModal({ isOpen, onClose, selectedStreams, totalAmount }: ClaimModalProps) {
+  const { user, loading, authenticated } = useAuth(); 
   const [claimType, setClaimType] = useState<'crypto' | 'fiat'>('crypto');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -216,22 +218,40 @@ export default function ClaimModal({ isOpen, onClose, selectedStreams, totalAmou
                   ))}
                 </div>
               </div>
-
+              
               <div className="space-y-3">
-                <h4 className="text-white/80 font-medium">Transferring to: IDR</h4>
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {selectedStreams.map((stream) => (
-                    <div key={stream.withdrawId} className="bg-white/5 rounded-lg p-3 flex items-center justify-between">
-                      <span className="text-white text-sm">{`${stream.bankName} ${stream.bankAccountNumber} ${stream.bankAccountName}`}</span>
-                      <button
-                        className="text-cyan-400 text-sm underline"
-                        onClick={() => handleOpenModal(stream)}
-                      >
-                        Change bank
-                      </button>
+                {claimType === 'fiat' ? (
+                  <div className="space-y-3 max-h-40 overflow-y-auto">
+                  <h4 className="text-white/80 font-medium">Transferring to: IDR</h4>
+                {selectedStreams.map((stream) => (
+                  <div
+                    key={stream.withdrawId}
+                    className="bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors rounded-xl p-4 flex items-center justify-between shadow-sm"
+                  >
+                    {/* Info Bank */}
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+                        {stream.bankName?.[0] || "B"}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-white font-medium">{user.bankName || "Unknown Bank"}</span>
+                        <span className="text-white/60 text-sm">{user.bankAccountNumber || "No Account"}</span>
+                      </div>
                     </div>
-                  ))}
-                </div>
+
+                    {/* Button Change Bank */}
+                    <button
+                      className="text-cyan-400 text-sm font-medium underline hover:text-cyan-300 transition-colors"
+                      onClick={() => handleOpenModal(stream)}
+                    >
+                      Change bank
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+
 
                 {/* Modal */}
                 {editingStream && (

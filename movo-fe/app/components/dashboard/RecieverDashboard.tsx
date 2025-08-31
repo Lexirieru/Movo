@@ -67,14 +67,19 @@ export default function ReceiverDashboard({ onDropdownOpen }: ReceiverDashboardP
         : [...prev, withdrawId]
     );
   };
-
   const handleSelectAll = () => {
-    if (selectedWithdraws.length === filteredWithdraws.length) {
+    // filter hanya withdraw yang withdrawId tidak ada (falsy)
+    const selectableWithdraws = filteredWithdraws
+      .filter((w) => !w.withdrawId)
+      .map((w) => w.withdrawId ?? ""); // tetap pakai fallback string kosong
+
+    if (selectedWithdraws.length === selectableWithdraws.length) {
       setSelectedWithdraws([]);
     } else {
-      setSelectedWithdraws(filteredWithdraws.map(w => w.withdrawId ?? ""));
+      setSelectedWithdraws(selectableWithdraws);
     }
   };
+
 
   const totalSelectedAmount = filteredWithdraws
   .filter(
