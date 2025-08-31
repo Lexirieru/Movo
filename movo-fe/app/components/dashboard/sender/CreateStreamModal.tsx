@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { X, Search } from "lucide-react";
 import { TransactionHistory } from "@/types/historyTemplate";
+import { useAuth } from "@/lib/userContext";
 
 interface Token {
   address: string;
@@ -61,6 +62,7 @@ export default function CreateStreamModal({
   onClose,
   onCreateStream,
 }: CreateStreamModalProps) {
+  const { user, loading, authenticated } = useAuth(); 
   const [step, setStep] = useState(1); // 1: form, 2: token search
   const [formData, setFormData] = useState<FormData>({
     token: null,
@@ -103,6 +105,9 @@ export default function CreateStreamModal({
       tokenIcon: formData.token.icon,
       depositWalletAddress: formData.receiverAddress,
       totalAmount: parseFloat(formData.amount).toString(),
+      senderId : user._id, 
+      senderName : "",
+      receiverName : "",
     };
     onCreateStream(newStream);
     onClose();

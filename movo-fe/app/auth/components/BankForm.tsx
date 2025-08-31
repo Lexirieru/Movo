@@ -25,6 +25,7 @@ export default function BankForm() {
   const handleSubmit = async () => {
     setIsLoading(true);
     try {
+      console.log(user)
       const bankCode = bankDirectory[formData.bankName];
       const response = await addBankAccount(user.email, formData.bankAccountNumber, bankCode);
       await new Promise(resolve => setTimeout(resolve, 2000));

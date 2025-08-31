@@ -46,7 +46,10 @@ const UserDataSchema = new Schema(
       required: false,
       unique : false,
     },
-
+    hashBankAccountNumber : {
+      type : String,
+      required : false
+    },
     bankAccountNumber: {
       type: String,
       required: false,

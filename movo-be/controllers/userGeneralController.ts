@@ -5,6 +5,7 @@ import axios from "axios";
 import fs from "fs";
 import bcrypt from "bcrypt";
 import { generateCookiesToken } from "../routes/auth";
+import { sha256 } from "ethers/lib/utils";
 
 const movoApiKey = process.env.IDRX_API_KEY!;
 const movoSecretKey = process.env.IDRX_SECRET_KEY!;
@@ -157,9 +158,14 @@ export async function addBankAccount(req : Request, res : Response){
     });
     // console.log('res.data: ');
     console.log(resData.data.data);
-
+    console.log(user)
+    const bank = `${user.bankName}_${user.bankAccountNumber}`;
+    console.log(bank)
+    const hashBankAccountNumber = await sha256(bank).toString();
+    
     const updatedUser = await UserModel.findOneAndUpdate({email}, {
       bankId : resData.data.data.id,
+      hashBankAccountNumber,
       bankAccountNumber: resData.data.data.bankAccountNumber,
       bankAccountName: resData.data.data.bankAccountName,
       bankCode: resData.data.data.bankCode,
@@ -167,6 +173,7 @@ export async function addBankAccount(req : Request, res : Response){
       depositWalletAddress : resData.data.data.DepositWalletAddress.walletAddress,
     }, { new: true});
 
+    
     if(!updatedUser){
       res.status(404).json({message: "User not found"});
       return
@@ -208,6 +215,7 @@ export async function getBankAccount(req : Request, res : Response) {
   res.status(401).json({data : resData.data});
   return;
 }
+
 
 // acuannya adalah bankId (bankId adalah id yang digenerate oleh idrx setiap selesai adding bank accounts)
 export async function deleteBankAccount(req : Request, res : Response) {
@@ -313,12 +321,15 @@ export async function changeBankAccount(req: Request, res: Response) {
     });
 
     const newBankData = addRes.data.data;
-
+    const bank = `${newBankData.bankName}_${newBankData.bankAccountNumber}`;
+    const hashBankAccountNumber = await sha256(bank).toString();
+    
     // 3. Update user with new bank info
     const updatedUser = await UserModel.findOneAndUpdate(
       { email },
       {
         bankId: newBankData.id,
+        hashBankAccountNumber: hashBankAccountNumber,
         bankAccountNumber: newBankData.bankAccountNumber,
         bankAccountName: newBankData.bankAccountName,
         bankCode: newBankData.bankCode,

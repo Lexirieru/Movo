@@ -16,7 +16,7 @@ export interface WithdrawHistory {
 
 export interface TransactionHistory {
   txId: string;
-  txHash: string;
+  txHash?: string;
   senderId: string;
   senderName: string;
   receiverName : string;
