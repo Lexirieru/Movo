@@ -27,3 +27,11 @@ export interface GroupOfUser {
   createdAt?: string; // dari timestamps mongoose
   updatedAt?: string; // dari timestamps mongoose
 }
+
+export interface BankAccountInformation {
+  bankId?: string;
+  bankName : string;
+  bankCode : string;
+  bankAccountNumber : string;
+  bankAccountName : string;
+}

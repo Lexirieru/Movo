@@ -24,7 +24,7 @@ import { useAuth } from "@/lib/userContext";
 export default function DashboardPage() {
   const { user, loading, authenticated } = useAuth(); 
   const [address, setAddress] = useState("0x123..."); // default sender
-  console.log(user,authenticated)
+  // console.log(user,authenticated)
   // Dummy role mapping
   const senderAddresses = ["0x123...", "0xabc..."];
   const receiverAddresses = ["0x456...", "0xdef..."];

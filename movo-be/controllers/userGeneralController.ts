@@ -206,16 +206,50 @@ export async function getBankAccount(req : Request, res : Response) {
   const timestamp = Math.round(new Date().getTime()).toString();
   const sig = createSignature("GET", path, bufferReq, timestamp, user.secretKey);
 
-  const resData = await axios.get(path, {
-    headers: {
-      "Content-Type": "application/json",
-      "idrx-api-key": user.apiKey,
-      "idrx-api-sig": sig,
-      "idrx-api-ts": timestamp,
-    },
-  });
-  res.status(401).json({data : resData.data});
-  return;
+  try{
+    const resData = await axios.get(path, {
+      headers: {
+        "Content-Type": "application/json",
+        "idrx-api-key": user.apiKey,
+        "idrx-api-sig": sig,
+        "idrx-api-ts": timestamp,
+      },
+    });
+    console.log(resData.data.data[0])
+    res.status(200).json({data : resData.data.data[0]});
+    return;
+  }
+  catch(err){
+    console.log(err)
+    res.status(400).json({error : err})
+    return;
+  }
+  
+}
+export async function getBankAccountFromDatabase(req : Request, res : Response) {
+  const {email} = req.body; 
+
+  const user = await UserModel.findOne({email});
+  if(!user){
+    res.status(404).json({message: "User not found"});
+    return
+  }
+
+  try{
+    const payload = {
+      bankName : user.bankName,
+      bankAccountNumber : user.bankAccountNumber,
+      bankAccountName : user.bankAccountName,
+    }
+    res.status(200).json({data : payload});
+    return;
+  }
+  catch(err){
+    console.log(err)
+    res.status(400).json({error : err})
+    return;
+  }
+  
 }
 
 

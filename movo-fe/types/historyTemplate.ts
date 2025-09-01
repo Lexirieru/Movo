@@ -1,3 +1,5 @@
+import { ReceiverInGroup } from "./receiverInGroupTemplate";
+
 export interface WithdrawHistory {
   withdrawId?: string;
   receiverId: string;
@@ -23,7 +25,7 @@ export interface TransactionHistory {
   groupId: string;
   groupName: string; 
   totalAmount: string;
-  Receiver : Receiver[];
+  Receiver : ReceiverInGroup[];
   totalReceiver : string;
   blockNumber : string;
   blockHash : string;

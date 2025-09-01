@@ -101,7 +101,7 @@ export default function CreateStreamModal({
       depositWalletAddress: formData.receiverAddress,
       amount: parseFloat(formData.amount).toString(),
     };
-
+    
     onCreateStream(newStream);
     onClose();
     resetForm();

@@ -2,6 +2,10 @@ import { ChevronDown, Building2, CreditCard, Mail, ArrowRight, AlertTriangle } f
 import { DollarSign } from "lucide-react";
 import { bankDictionary } from "@/lib/dictionary";
 import FormInput from "@/app/auth/components/FormInput";
+import { useEffect, useState } from "react";
+import { useAuth } from "@/lib/userContext";
+import { changeBankAccount, getBankAccount, getBankAccountFromDatabase } from "@/app/api/api";
+import { BankAccountInformation } from "@/types/receiverInGroupTemplate";
 
 interface BankFormProps {
   bankForm: { bankName: string; bankAccountNumber: string; accountHolderName: string };
@@ -11,9 +15,119 @@ interface BankFormProps {
   isProcessing?: boolean;
 }
 
-export default function BankForm({ bankForm, onChange, onSelectBank, onConfirm, isProcessing }: BankFormProps) {
+export default function BankForm({
+  bankForm,
+  onChange,
+  onSelectBank,
+  onConfirm,
+  isProcessing,
+}: BankFormProps) {
+  const { user, loading } = useAuth();
+  const [bankAccountData, setBankAccountData] = useState<BankAccountInformation>();
+  const [originalData, setOriginalData] = useState<BankAccountInformation>();
+  const [hasFetched, setHasFetched] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
+  const [isConfirming, setIsConfirming] = useState(false);
+
   const isFormValid = bankForm.bankName && bankForm.bankAccountNumber;
   const estimatedTime = "1-3 business days";
+
+  // cek apakah ada perubahan
+  const isChanged =
+    originalData &&
+    (bankForm.bankName !== originalData.bankName ||
+      bankForm.bankAccountNumber !== originalData.bankAccountNumber ||
+      bankForm.accountHolderName !== originalData.bankAccountName);
+
+  useEffect(() => {
+    if (loading || !user?._id || !user.email || hasFetched) return;
+
+    const fetchBankAccountData = async () => {
+      try {
+        setIsFetching(true);
+        const data = await getBankAccount(user.email);
+
+        if (!data?.data) {
+          setIsFetching(false);
+          setHasFetched(true);
+          return;
+        }
+
+        const initBankAccountInformation: BankAccountInformation = {
+          bankId: data.data.bankId,
+          bankName: data.data.bankName,
+          bankCode: data.data.bankCode,
+          bankAccountNumber: data.data.bankAccountNumber,
+          bankAccountName: data.data.bankAccountName,
+        };
+
+        setBankAccountData(initBankAccountInformation);
+        setOriginalData(initBankAccountInformation);
+
+        // isi ke form
+        onChange({ target: { name: "bankName", value: initBankAccountInformation.bankName } } as any);
+        onChange({ target: { name: "bankAccountNumber", value: initBankAccountInformation.bankAccountNumber } } as any);
+        onChange({ target: { name: "accountHolderName", value: initBankAccountInformation.bankAccountName } } as any);
+
+        setHasFetched(true);
+      } catch (err) {
+        console.error("Failed to fetch bank account data", err);
+      } finally {
+        setIsFetching(false);
+      }
+    };
+
+    fetchBankAccountData();
+  }, [loading, user, hasFetched, onChange]);
+
+  // 👇 tampilkan loading screen sampai fetch selesai
+  if (isFetching) {
+    return (
+      <div className="flex justify-center items-center h-40">
+        <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+        <span className="ml-3 text-white/70">Loading bank account...</span>
+      </div>
+    );
+  }
+
+  const handleConfirmChanges = async () => {
+  try {
+    setIsConfirming(true);
+    const bankCode = bankDictionary[bankForm.bankName];
+
+    // update ke backend
+    await changeBankAccount(
+      user?.email,
+      bankForm.bankAccountNumber,
+      bankCode
+    );
+
+    // setelah sukses, ambil lagi data terbaru dari backend
+    const refreshed = await getBankAccount(user?.email);
+    if (refreshed?.data) {
+      const updated: BankAccountInformation = {
+        bankId: refreshed.data.bankId,
+        bankName: refreshed.data.bankName,
+        bankCode: refreshed.data.bankCode,
+        bankAccountNumber: refreshed.data.bankAccountNumber,
+        bankAccountName: refreshed.data.bankAccountName,
+      };
+
+      setOriginalData(updated);
+      setBankAccountData(updated);
+
+      // isi lagi ke form (supaya Account Holder Name ke-update)
+      onChange({ target: { name: "bankName", value: updated.bankName } } as any);
+      onChange({ target: { name: "bankAccountNumber", value: updated.bankAccountNumber } } as any);
+      onChange({ target: { name: "accountHolderName", value: updated.bankAccountName } } as any);
+    }
+  } catch (err) {
+    console.error("Failed to update bank account", err);
+  } finally {
+    setIsConfirming(false);
+  }
+};
+
 
   return (
     <div className="space-y-6">
@@ -39,7 +153,9 @@ export default function BankForm({ bankForm, onChange, onSelectBank, onConfirm, 
                   </div>
                   <div>
                     <div className="text-white font-medium">{bankForm.bankName}</div>
-                    <div className="text-gray-400 text-sm">Code: {bankDictionary[bankForm.bankName]}</div>
+                    <div className="text-gray-400 text-sm">
+                      Code: {bankDictionary[bankForm.bankName]}
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -62,13 +178,34 @@ export default function BankForm({ bankForm, onChange, onSelectBank, onConfirm, 
           <FormInput
             type="text"
             name="accountHolderName"
-            placeholder="Account Holder Name (Optional)"
+            placeholder="Account Holder Name"
             value={bankForm.accountHolderName}
-            onChange={onChange}
+            onChange={() => {}} // kosongin, supaya nggak bisa diubah
             icon={Mail}
+            disabled 
+            readOnly
           />
+
         </div>
       </div>
+
+      {/* Show confirm changes button jika ada perubahan */}
+      {isChanged && (
+        <button
+          onClick={handleConfirmChanges}
+          disabled={isConfirming}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl transition-all font-medium flex items-center justify-center space-x-2"
+        >
+          {isConfirming ? (
+            <>
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+              <span>Confirming...</span>
+            </>
+          ) : (
+            <span>Confirm Changes</span>
+          )}
+        </button>
+      )}
 
       {/* Fiat Conversion Info */}
       <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
@@ -86,13 +223,13 @@ export default function BankForm({ bankForm, onChange, onSelectBank, onConfirm, 
       {/* Action Buttons */}
       <div className="flex gap-3">
         <button
-          onClick={() => window.history.back()} // Or pass onCancel prop
+          onClick={() => window.history.back()}
           className="flex-1 bg-white/10 text-white py-3 rounded-xl hover:bg-white/20 transition-colors font-medium"
           disabled={isProcessing}
         >
           Cancel
         </button>
-        
+
         <button
           onClick={onConfirm}
           disabled={!isFormValid || isProcessing}
@@ -112,19 +249,6 @@ export default function BankForm({ bankForm, onChange, onSelectBank, onConfirm, 
           )}
         </button>
       </div>
-
-      {/* Preview Summary */}
-      {isFormValid && (
-        <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-white/60">Transfer to:</span>
-            <div className="text-right">
-              <div className="text-white font-medium">{bankForm.bankName}</div>
-              <div className="text-white/60 font-mono">{bankForm.bankAccountNumber}</div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

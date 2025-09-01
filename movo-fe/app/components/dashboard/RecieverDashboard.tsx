@@ -26,7 +26,13 @@ export default function ReceiverDashboard({ onDropdownOpen }: ReceiverDashboardP
     const fetchWithdrawHistory = async () => {
       try {
         const historyTemplate = await loadAllWithdrawHistory(user._id);
-
+        if (!historyTemplate || !Array.isArray(historyTemplate)) {
+          console.warn("Withdraw history not found or not an array.");
+          setWithdrawHistory([]); // fallback empty array
+          setHasFetched(true);
+          return;
+        }
+        
         const templatesWithdrawHistory: WithdrawHistory[] = historyTemplate.map(
           (w: any) => ({
             withdrawId: w.withdrawId,

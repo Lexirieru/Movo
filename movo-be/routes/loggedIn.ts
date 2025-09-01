@@ -1,4 +1,4 @@
-import { addBankAccount, changeBankAccount, deleteBankAccount, getBankAccount, getOrganizationMembers, onBoardingUser} from "../controllers/userGeneralController";
+import { addBankAccount, changeBankAccount, deleteBankAccount, getBankAccount, getBankAccountFromDatabase, getOrganizationMembers, onBoardingUser} from "../controllers/userGeneralController";
 
 import express, { RequestHandler } from "express";
 import { addReceiverToGroup, loadAllGroupTransactionHistory } from "../controllers/userSenderController";
@@ -36,6 +36,11 @@ const routes: RouteDefinition[] = [
     method: "post",
     path: "/getBankAccount",
     action: getBankAccount,
+  },
+  {
+    method: "post",
+    path: "/getBankAccountFromDatabase",
+    action: getBankAccountFromDatabase,
   },
   {
     method: "post",
