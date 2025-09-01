@@ -10,12 +10,12 @@ import {
   Filter,
 } from "lucide-react";
 import { useAuth } from "@/lib/userContext";
-import { loadSpecifiedGroup } from "@/app/api/api";
+import { loadSpecifiedGroup, removeReceiverDataFromGroup } from "@/app/api/api";
 import { GroupOfUser, ReceiverInGroup } from "@/types/receiverInGroupTemplate";
 import CreateStreamModal from "./sender/CreateStreamModal";
 
 interface Stream {
-  id: string;
+  _id: string;
   token: string;
   tokenIcon: string;
   recipient: string;
@@ -53,13 +53,12 @@ export default function SenderDashboard({
           user._id,
           groupId
         );
-        console.log(group)
 
         if (!group) return;
 
         const mappedStreams: Stream[] = (group.Receivers || []).map(
           (receiver: ReceiverInGroup, i: number) => ({
-            id: receiver._id || `${i}`,
+            _id: receiver._id || `${i}`,
             token:
               typeof receiver.originCurrency === "string"
                 ? receiver.originCurrency
@@ -81,7 +80,36 @@ export default function SenderDashboard({
 
     fetchGroupStreams();
   }, [loading, user, hasFetched, groupId, refreshFlag]);
+  const handleRefund = async (id : string) => {
+    const confirmRefund = window.confirm("Are you sure you want to refund from this person? This action cannot be undone.");
+    if (!confirmRefund) return; // user batal, langsung keluar
 
+    // try {
+    //   const groupDeleted = await deleteGroup(user._id, groupId);
+    //   console.log(groupDeleted);
+    //   // Panggil callback setelah sukses delete
+    //   if (onGroupDeleted) onGroupDeleted();
+    // } catch (err) {
+    //   console.log(err);
+    //   return;
+    // }
+  }
+
+  const handleRemove = async (receiverId : string) => {
+    const confirmRemove = window.confirm("Are you sure you want to remove this person from the group? This action cannot be undone.");
+    if (!confirmRemove) return; // user batal, langsung keluar
+    console.log(receiverId)
+    try {
+      console.log(user)
+      const groupDeleted = await removeReceiverDataFromGroup(user._id, groupId, receiverId );
+      console.log(groupDeleted);
+      // Panggil callback setelah sukses delete
+      // if (onGroupDeleted) onGroupDeleted();
+    } catch (err) {
+      console.log(err);
+      return;
+    }
+  }
   // Filter streams
   const filteredStreams = streams.filter((s) => {
     const matchesSearch =
@@ -203,7 +231,7 @@ export default function SenderDashboard({
         <div className="lg:hidden space-y-4">
           {filteredStreams.map((s) => (
             <div
-              key={s.id}
+              key={s._id}
               className="bg-white/5 rounded-xl p-4 border border-white/10"
             >
               <div className="flex items-center justify-between mb-3">
@@ -239,7 +267,7 @@ export default function SenderDashboard({
               <thead>
                 <tr className="border-b border-white/10 bg-white/5">
                   <th className="text-left p-4 text-white/80 font-medium">
-                    Recipient
+                    Recipient Address
                   </th>
                   <th className="text-left p-4 text-white/80 font-medium">
                     Recipient Name
@@ -251,14 +279,14 @@ export default function SenderDashboard({
                     Amount
                   </th>
                   <th className="text-left p-4 text-white/80 font-medium">
-                    Status
+                    Action
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {filteredStreams.map((s) => (
                   <tr
-                    key={s.id}
+                    key={s._id}
                     className="border-b border-white/5 hover:bg-white/5 transition-colors"
                   >
                     <td className="p-4 text-white">{s.recipient}</td>
@@ -266,11 +294,21 @@ export default function SenderDashboard({
                     <td className="p-4 text-white">{s.token}</td>
                     <td className="p-4 text-white">{s.totalAmount}</td>
                     <td className="p-4">
-                      {s.totalSent >= s.totalAmount ? (
-                        <span className="text-green-400">Completed</span>
-                      ) : (
-                        <span className="text-yellow-400">Pending</span>
-                      )}
+                      <button
+                        onClick={() => handleRefund(s._id)} // panggil fungsi refund
+                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-sm font-medium transition-colors"
+                      >
+                        Refund
+                      </button>
+                    </td>
+
+                    <td className="p-4">
+                      <button
+                        onClick={() => handleRemove(s._id)} // panggil fungsi refund
+                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-sm font-medium transition-colors"
+                      >
+                        Remove
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -298,7 +336,7 @@ export default function SenderDashboard({
         onClose={() => setIsCreateModalOpen(false)}
         onCreateStream={(newReceiver) => {
           const mapped: Stream = {
-            id: newReceiver._id,
+            _id: newReceiver._id,
             token:
               typeof newReceiver.originCurrency === "string"
                 ? newReceiver.originCurrency

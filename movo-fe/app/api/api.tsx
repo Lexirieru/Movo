@@ -138,6 +138,16 @@ export const deleteGroup = async (_id : string, groupId : string) => {
       console.log(err);
   }  
 }
+export const removeReceiverDataFromGroup = async (senderId : string, groupId : string, receiverId : string) => {
+  try{
+    const response = await api.post("/removeReceiverDataFromGroup", {senderId, groupId, receiverId});
+    console.log(response)
+    return response.data
+  }
+  catch(err){
+      console.log(err);
+  }  
+}
 
 export const loadSpecifiedGroupTransactionHistory = async (_id : string, groupId : string) => {
   try{

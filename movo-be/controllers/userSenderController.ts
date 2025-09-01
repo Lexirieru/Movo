@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { GroupOfUserModel, UserModel } from "../models/userModel"; // Pastikan path-nya benar
 import { TransactionHistoryModel } from "../models/transactionRecordModel";
-
+import mongoose from "mongoose";
 // const apiKey = process.env.IDRX_API_KEY!;
 // const secretKey = process.env.IDRX_SECRET_KEY!;
 
@@ -211,25 +211,29 @@ export async function loadSpecifiedGroup(req: Request, res: Response) {
 }
 // untuk ngeremove receiver dari group
 export async function removeReceiverDataFromGroup(req: Request, res: Response) {
-  const { receiverEmail, groupId, _id } = req.body;
 
-  if (!groupId || !receiverEmail || !_id) {
+  const { receiverId, groupId, senderId } = req.body;
+
+  if (!groupId || !receiverId || !senderId) {
     res.status(400).json({
-      message: "groupId, receiverEmail, and sender _id are required",
+      message: "groupId, receiverAddress, and sender _id are required",
     });
     return;
   }
 
   try {
-    // hapus receiver berdasarkan email dari array receivers
+    // pastikan receiverId adalah string dari _id yang ingin dihapus
     const groupData = await GroupOfUserModel.findOneAndUpdate(
-      { groupId, senderId: _id },
+      { groupId, senderId },
       {
-        $pull: { receivers: { email: receiverEmail } },
+        $pull: { Receivers: { _id: new mongoose.Types.ObjectId(receiverId) } }, // perhatikan 'Receivers' dan ObjectId
       },
-      { new: true } // supaya hasil update langsung dikembalikan
+      { new: true } // kembalikan data setelah update
     );
 
+    console.log("Updated group:", groupData);
+
+    console.log(groupData)
     if (!groupData) {
       res.status(404).json({
         message: "Group or receiver not found",

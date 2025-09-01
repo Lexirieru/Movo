@@ -75,7 +75,7 @@ export default function CreateStreamModal({
       // Filter tokens berdasarkan address, symbol, atau name
       const filtered = AVAILABLE_TOKENS.filter(
         token =>
-          token.address.toLowerCase().includes(query.toLowerCase()) ||
+          token.name.toLowerCase().includes(query.toLowerCase()) ||
           token.symbol.toLowerCase().includes(query.toLowerCase()) ||
           token.name.toLowerCase().includes(query.toLowerCase())
       );
@@ -99,7 +99,7 @@ export default function CreateStreamModal({
     try {
       const addUser = await addReceiverToGroup(
         user._id,
-        formData.token.address,
+        formData.token.name,
         formData.token.icon,
         groupId,
         formData.receiverAddress,
@@ -110,7 +110,7 @@ export default function CreateStreamModal({
       const newStream: ReceiverInGroup = {
         _id: addUser.insertedId || Date.now().toString(), // fallback kalau backend gak return id
         groupId,
-        originCurrency: formData.token.address,
+        originCurrency: formData.token.name,
         fullname : addUser.fullname,
         tokenIcon: formData.token.icon,
         depositWalletAddress: formData.receiverAddress,
@@ -194,7 +194,7 @@ export default function CreateStreamModal({
               <div className="space-y-2">
                 {searchResults.map((token) => (
                   <button
-                    key={token.address}
+                    key={token.name}
                     onClick={() => handleTokenSelect(token)}
                     className="w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors flex items-center space-x-4 text-left"
                   >
