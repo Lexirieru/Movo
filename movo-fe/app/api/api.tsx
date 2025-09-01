@@ -81,6 +81,17 @@ export const changeBankAccount = async (email : string, bankAccountNumber : stri
 
 
 
+
+export const addReceiverToGroup = async (_id : string) => {
+  try{
+      const response = await api.post("/addReceiverToGroup", {_id});
+      return response.data.data
+  }
+  catch(err){
+      console.log(err);
+  }  
+}
+
 export const loadAllWithdrawHistory = async (_id : string) => {
   try{
       const response = await api.post("/loadAllWithdrawHistory", {_id});

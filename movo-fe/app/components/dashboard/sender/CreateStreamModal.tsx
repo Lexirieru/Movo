@@ -1,22 +1,14 @@
 "use client";
 import { useState } from "react";
 import { X, Search } from "lucide-react";
-import { TransactionHistory } from "@/types/historyTemplate";
+import { ReceiverInGroup, Token } from "@/types/receiverInGroupTemplate";
 import { useAuth } from "@/lib/userContext";
-
-interface Token {
-  address: string;
-  symbol: string;
-  name: string;
-  icon: string;
-  balance: number;
-}
 
 
 interface CreateStreamModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreateStream: (stream: TransactionHistory) => void;
+  onCreateStream: (stream: FormData) => void;
 }
 
 interface FormData {
@@ -99,16 +91,17 @@ export default function CreateStreamModal({
     if (!formData.token || !formData.receiverAddress || !formData.amount)
       return;
     
-    const newStream: TransactionHistory = {
-      txId: Date.now().toString(),
-      originCurrency: formData.token.address,
+    const newStream: ReceiverInGroup = {
+      // idnya sender
+      _id: user._id,
+      // ngambil dari FE
+      groupId: Date.now().toString(),
+      originCurrency: formData.token,
       tokenIcon: formData.token.icon,
       depositWalletAddress: formData.receiverAddress,
-      totalAmount: parseFloat(formData.amount).toString(),
-      senderId : user._id, 
-      senderName : "",
-      receiverName : "",
+      amount: parseFloat(formData.amount).toString(),
     };
+
     onCreateStream(newStream);
     onClose();
     resetForm();

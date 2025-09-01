@@ -54,78 +54,79 @@ export async function addGroup(req: Request, res: Response) {
     return;
   }
 }
+
+
 // untuk ngeadd receiver ke suatu grup lewat depositwalletaddress dia
-export async function addReceiverToGroup(req : Request, res: Response){
-  const {_id, groupId, depositWalletAddress} = req.body;
-  if(!depositWalletAddress){
+// untuk ngeadd receiver ke suatu grup lewat depositWalletAddress + sekalian nambahin amount
+export async function addReceiverToGroup(req: Request, res: Response) {
+  const { _id, originCurrency, tokenIcon, groupId, depositWalletAddress, amount } = req.body;
+
+  if (!depositWalletAddress || !amount) {
     res.status(400).json({
-      message: "DepositWalletAddress are required",
+      message: "DepositWalletAddress and amount are required",
     });
     return;
   }
 
-  const groupData = await GroupOfUserModel.findOne({groupId});
-  if(groupData == null){
-    res.status(404).json({
-      message: "Group not found",
-    });
+  const groupData = await GroupOfUserModel.findOne({ groupId });
+  if (!groupData) {
+    res.status(404).json({ message: "Group not found" });
     return;
   }
 
-  if(groupData.senderId.toString() !== _id){
-    res.status(403).json({
-      message: "You are not authorized to view this group",
-    });
+  if (groupData.senderId.toString() !== _id) {
+    res.status(403).json({ message: "You are not authorized to modify this group" });
     return;
   }
 
-  try{
-    const userData = await UserModel.findOne({depositWalletAddress});
-    if(!userData){
+  try {
+    const userData = await UserModel.findOne({ depositWalletAddress });
+    if (!userData) {
       res.status(404).json({
         message: "User not found with the provided deposit wallet address",
       });
       return;
     }
+
+    // push receiver baru beserta amount
     const updatedGroup = await GroupOfUserModel.findOneAndUpdate(
-      {groupId},
+      { groupId },
       {
         $push: {
           Receivers: {
-            id : userData._id,
-            email : userData.email,
-            fullname: userData.fullname, // pastikan di UserModel ada field `name`
+            id: userData._id,
+            email: userData.email,
+            fullname: userData.fullname,
             apiKey: userData.apiKey,
             secretKey: userData.secretKey,
             depositWalletAddress: userData.depositWalletAddress,
+            originCurrency,
+            tokenIcon,
+            amount,
           },
         },
         $inc: { totalRecipients: 1 },
       },
-      { new: true } // supaya return doc terbaru setelah update
+      { new: true } // supaya return document terbaru
     );
 
     if (!updatedGroup) {
-      res.status(404).json({
-        message: "Group not found",
-      });
+      res.status(404).json({ message: "Group not found" });
       return;
     }
 
     res.status(201).json({
-      message: "Receiver successfully added to group",
+      message: "Receiver successfully added to group with amount",
       group: updatedGroup,
     });
-    return;
-  }
-  catch(err: any){
+  } catch (err: any) {
     res.status(500).json({
       message: "Error adding receiver to group",
       error: err.message,
     });
-    return;
   }
 }
+
 //untuk ngefetch semua receivers yang ada di suatu grup 
 export async function fetchReceiversInGroup(req : Request, res: Response){
   const {groupId, _id} = req.body;
@@ -160,55 +161,7 @@ export async function fetchReceiversInGroup(req : Request, res: Response){
     return;
   }
 }
-// untuk ngespecify amount transfer ke msaing masing receiver
-export async function addAmountTransferToReceiver(req: Request, res: Response) {
-  // amountInUSDC
-  const {_id, groupId, receiverEmail, amount} = req.body;
 
-  try {
-    const groupData = await GroupOfUserModel.findOneAndUpdate({groupId});
-    
-    if(!groupData){
-      res.status(404).json({
-        message: "Group not found",
-      });
-      return;
-    }
-
-    if(groupData.senderId.toString() !== _id){
-      res.status(403).json({
-        message: "You are not authorized to view this group",
-      });
-      return;
-    }
-
-    const updatedGroup = await GroupOfUserModel.findOneAndUpdate(
-      { groupId, "Receivers.email": receiverEmail }, // cari group + receiver by email
-      { $set: { "Receivers.$.amount": amount } }, // update hanya receiver tsb
-      { new: true }
-    );
-
-    if (!updatedGroup) {
-      res.status(404).json({
-        message: "Group or Receiver not found",
-      });
-      return;
-    }
-
-    res.status(201).json({
-      message:"Amount successfully added to specifed receiver",
-      group : updatedGroup,
-    })
-    return;
-
-  } catch (err: any) {
-    res.status(500).json({
-      message: "Error adding amount to specified receiver",
-      error: err.message,
-    });
-    return;
-  }
-}
 // untuk nampilin semua group yang dia gaji
 export async function loadAllGroup(req: Request, res: Response) {
   const {_id} = req.body;

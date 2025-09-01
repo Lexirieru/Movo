@@ -37,10 +37,3 @@ export interface TransactionHistory {
   depositWalletAddress?: string;
   tokenIcon? : string;
 }
-
-export interface Receiver {
-  email: string;
-  fullname: string;
-  amount: string;
-  createdAt: string; // biasanya sampai ke FE dikirim dalam bentuk ISO string, bukan Date object
-}

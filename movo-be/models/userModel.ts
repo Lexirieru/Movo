@@ -99,6 +99,7 @@ const GroupOfUserSchema = new Schema(
     },
     Receivers: [
       {
+        // dari be
         id: {
           type: String,
           required : true,
@@ -119,11 +120,21 @@ const GroupOfUserSchema = new Schema(
           type: String,
           required: true,
         },
+
+        // dari fe
+        originCurrency : {
+          type : String,
+          required : true
+        },
+        tokenIcon : {
+          type : String,
+          required : true
+        },
         depositWalletAddress : {
           type: String,
           required: true,
         },
-        availableBalance : {
+        amount : {
           type: Number,
           required : false,
         },
