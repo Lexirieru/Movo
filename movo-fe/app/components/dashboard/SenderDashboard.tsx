@@ -13,13 +13,14 @@ import { useAuth } from "@/lib/userContext";
 import { loadSpecifiedGroup, removeReceiverDataFromGroup } from "@/app/api/api";
 import { GroupOfUser, ReceiverInGroup } from "@/types/receiverInGroupTemplate";
 import CreateStreamModal from "./sender/CreateStreamModal";
+import { Trash2, Edit, RotateCcw, X } from "lucide-react";
 
 interface Stream {
   _id: string;
   token: string;
   tokenIcon: string;
   recipient: string;
-  fullname? : string;
+  fullname?: string;
   totalAmount: number;
   totalSent: number;
 }
@@ -38,10 +39,12 @@ export default function SenderDashboard({
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [streams, setStreams] = useState<Stream[]>([]);
   const [hasFetched, setHasFetched] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editAmount, setEditAmount] = useState<string>("");
   const [refreshFlag, setRefreshFlag] = useState(0); // 🔑 trigger ulang useEffect
 
   const [filterType, setFilterType] = useState<"all" | "pending" | "completed">(
-    "all"
+    "all",
   );
 
   useEffect(() => {
@@ -51,7 +54,7 @@ export default function SenderDashboard({
       try {
         const group: GroupOfUser | null = await loadSpecifiedGroup(
           user._id,
-          groupId
+          groupId,
         );
 
         if (!group) return;
@@ -68,7 +71,7 @@ export default function SenderDashboard({
             fullname: receiver.fullname || "Unknown",
             totalAmount: receiver.amount || 0,
             totalSent: 0,
-          })
+          }),
         );
 
         setStreams(mappedStreams);
@@ -80,8 +83,10 @@ export default function SenderDashboard({
 
     fetchGroupStreams();
   }, [loading, user, hasFetched, groupId, refreshFlag]);
-  const handleRefund = async (id : string) => {
-    const confirmRefund = window.confirm("Are you sure you want to refund from this person? This action cannot be undone.");
+  const handleRefund = async (id: string) => {
+    const confirmRefund = window.confirm(
+      "Are you sure you want to refund from this person? This action cannot be undone.",
+    );
     if (!confirmRefund) return; // user batal, langsung keluar
 
     // try {
@@ -93,15 +98,21 @@ export default function SenderDashboard({
     //   console.log(err);
     //   return;
     // }
-  }
+  };
 
-  const handleRemove = async (receiverId : string) => {
-    const confirmRemove = window.confirm("Are you sure you want to remove this person from the group? This action cannot be undone.");
+  const handleRemove = async (receiverId: string) => {
+    const confirmRemove = window.confirm(
+      "Are you sure you want to remove this person from the group? This action cannot be undone.",
+    );
     if (!confirmRemove) return; // user batal, langsung keluar
-    console.log(receiverId)
+    console.log(receiverId);
     try {
-      console.log(user)
-      const groupDeleted = await removeReceiverDataFromGroup(user._id, groupId, receiverId );
+      console.log(user);
+      const groupDeleted = await removeReceiverDataFromGroup(
+        user._id,
+        groupId,
+        receiverId,
+      );
       console.log(groupDeleted);
       // Panggil callback setelah sukses delete
       // if (onGroupDeleted) onGroupDeleted();
@@ -109,7 +120,7 @@ export default function SenderDashboard({
       console.log(err);
       return;
     }
-  }
+  };
   // Filter streams
   const filteredStreams = streams.filter((s) => {
     const matchesSearch =
@@ -120,21 +131,41 @@ export default function SenderDashboard({
       filterType === "all"
         ? true
         : filterType === "pending"
-        ? s.totalSent < s.totalAmount
-        : filterType === "completed"
-        ? s.totalSent >= s.totalAmount
-        : true;
+          ? s.totalSent < s.totalAmount
+          : filterType === "completed"
+            ? s.totalSent >= s.totalAmount
+            : true;
 
     return matchesSearch && matchesFilter;
   });
+  const handleSaveAmount = async (id: string) => {
+    try {
+      // update local state dulu
+      setStreams((prev) =>
+        prev.map((stream) =>
+          stream._id === id
+            ? { ...stream, totalAmount: parseFloat(editAmount) }
+            : stream,
+        ),
+      );
 
-  const totalCommitted = streams.reduce(
-    (acc, s) => acc + s.totalAmount,
-    0
-  );
-  const completedCount = streams.filter((s) => s.totalSent >= s.totalAmount)
-    .length;
-  const pendingCount = streams.filter((s) => s.totalSent < s.totalAmount).length;
+      // TODO: update ke backend (misal panggil API updateReceiverAmount)
+      // await updateReceiverAmount(user._id, groupId, id, parseFloat(editAmount));
+
+      setEditingId(null);
+      setEditAmount("");
+    } catch (err) {
+      console.error("Failed to update amount:", err);
+    }
+  };
+
+  const totalCommitted = streams.reduce((acc, s) => acc + s.totalAmount, 0);
+  const completedCount = streams.filter(
+    (s) => s.totalSent >= s.totalAmount,
+  ).length;
+  const pendingCount = streams.filter(
+    (s) => s.totalSent < s.totalAmount,
+  ).length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black">
@@ -166,7 +197,9 @@ export default function SenderDashboard({
             <div className="flex items-center space-x-3">
               <Clock className="w-8 h-8 text-yellow-400" />
               <div>
-                <div className="text-2xl font-bold text-white">{pendingCount}</div>
+                <div className="text-2xl font-bold text-white">
+                  {pendingCount}
+                </div>
                 <div className="text-white/60 text-sm">Pending Streams</div>
               </div>
             </div>
@@ -176,7 +209,9 @@ export default function SenderDashboard({
             <div className="flex items-center space-x-3">
               <CheckCircle2 className="w-8 h-8 text-green-400" />
               <div>
-                <div className="text-2xl font-bold text-white">{completedCount}</div>
+                <div className="text-2xl font-bold text-white">
+                  {completedCount}
+                </div>
                 <div className="text-white/60 text-sm">Completed</div>
               </div>
             </div>
@@ -214,9 +249,7 @@ export default function SenderDashboard({
             <select
               value={filterType}
               onChange={(e) =>
-                setFilterType(
-                  e.target.value as "all" | "pending" | "completed"
-                )
+                setFilterType(e.target.value as "all" | "pending" | "completed")
               }
               className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
             >
@@ -279,6 +312,9 @@ export default function SenderDashboard({
                     Amount
                   </th>
                   <th className="text-left p-4 text-white/80 font-medium">
+                    Refund
+                  </th>
+                  <th className="text-left p-4 text-white/80 font-medium">
                     Action
                   </th>
                 </tr>
@@ -292,23 +328,61 @@ export default function SenderDashboard({
                     <td className="p-4 text-white">{s.recipient}</td>
                     <td className="p-4 text-white">{s.fullname}</td>
                     <td className="p-4 text-white">{s.token}</td>
-                    <td className="p-4 text-white">{s.totalAmount}</td>
+                    <td className="p-4 text-white">
+                      {editingId === s._id ? (
+                        <input
+                          type="number"
+                          value={editAmount}
+                          onChange={(e) => setEditAmount(e.target.value)}
+                          className="bg-white/10 border border-white/20 rounded px-2 py-1 text-white w-24"
+                        />
+                      ) : (
+                        s.totalAmount
+                      )}
+                    </td>
                     <td className="p-4">
                       <button
                         onClick={() => handleRefund(s._id)} // panggil fungsi refund
-                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-sm font-medium transition-colors"
+                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg aspect-square text-sm font-medium transition-colors"
                       >
-                        Refund
+                        <RotateCcw className="w-4 h-4" /> {/* Refund */}
                       </button>
                     </td>
-
-                    <td className="p-4">
-                      <button
-                        onClick={() => handleRemove(s._id)} // panggil fungsi refund
-                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-sm font-medium transition-colors"
-                      >
-                        Remove
-                      </button>
+                    <td className="p-4 flex items-center gap-2">
+                      {editingId === s._id ? (
+                        <>
+                          <button
+                            onClick={() => handleSaveAmount(s._id)}
+                            className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg aspect-square text-sm font-medium"
+                          >
+                            <Edit className="w-4 h-4" /> {/* Edit */}
+                          </button>
+                          <button
+                            onClick={() => setEditingId(null)}
+                            className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded-lg aspect-square text-sm font-medium"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => {
+                              setEditingId(s._id);
+                              setEditAmount(s.totalAmount.toString());
+                            }}
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 aspect-square rounded-lg text-sm font-medium"
+                          >
+                            <Edit className="w-4 h-4" /> {/* Edit */}
+                          </button>
+                          <button
+                            onClick={() => handleRemove(s._id)} // panggil fungsi refund
+                            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg aspect-square text-sm font-medium transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" /> {/* Remove */}
+                          </button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))}
