@@ -23,17 +23,16 @@ contract MockIDRX is ERC20, Ownable {
     // ============ EVENTS ============
     
     event BurnWithAccountNumber(
-        address indexed burner,
+        address indexed _user,       // User address (same as mainnet event)
         uint256 amount,
-        string hashedAccountNumber,
-        uint256 timestamp
+        string hashedAccountNumber
     );
     
     // ============ CONSTRUCTOR ============
     
     constructor() ERC20("Mock IDRX", "mIDRX") Ownable(msg.sender) {
-        // Mint initial supply to deployer
-        _mint(msg.sender, 1000000 * 10**2); // 10M IDRX
+        // Mint initial supply to deployer for testing
+        _mint(msg.sender, 1000000 * 10**2); // 10M IDRX (2 decimals)
     }
     
     // ============ MAIN FUNCTIONS ============
@@ -56,8 +55,7 @@ contract MockIDRX is ERC20, Ownable {
         emit BurnWithAccountNumber(
             msg.sender,
             _amount,
-            _hashedAccountNumber,
-            block.timestamp
+            _hashedAccountNumber
         );
     }
     

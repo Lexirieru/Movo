@@ -27,16 +27,15 @@ contract DeployIDRXEscrow is Script {
         vm.startBroadcast(deployerPrivateKey);
         
         // Deploy EscrowIDRX contract
-        // Set fee recipient to deployer address for testing
-        address deployer = vm.addr(deployerPrivateKey);
-        EscrowIDRX escrowIDRX = new EscrowIDRX(deployer);
+        // Fee recipient is already set to 0x63470E56eFeB1759F3560500fB2d2FD43A86F179
+        EscrowIDRX escrowIDRX = new EscrowIDRX();
         
         vm.stopBroadcast();
         
         // Log deployment information
         console.log("EscrowIDRX deployed at:", address(escrowIDRX));
-        console.log("Fee recipient set to:", deployer);
-        console.log("Deployer address:", deployer);
+        console.log("Fee recipient set to: 0x63470E56eFeB1759F3560500fB2d2FD43A86F179");
+        console.log("Deployer address:", vm.addr(deployerPrivateKey));
         
         // Log contract details
         console.log("Platform fee:", escrowIDRX.platformFeeBps(), "basis points (0.25%)");

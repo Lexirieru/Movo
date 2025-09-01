@@ -27,16 +27,15 @@ contract DeployUSDCEscrow is Script {
         vm.startBroadcast(deployerPrivateKey);
         
         // Deploy EscrowUSDC contract
-        // Set fee recipient to deployer address for testing
-        address deployer = vm.addr(deployerPrivateKey);
-        EscrowUSDC escrowUSDC = new EscrowUSDC(deployer);
+        // Fee recipient is already set to 0x63470E56eFeB1759F3560500fB2d2FD43A86F179
+        EscrowUSDC escrowUSDC = new EscrowUSDC();
         
         vm.stopBroadcast();
         
         // Log deployment information
         console.log("EscrowUSDC deployed at:", address(escrowUSDC));
-        console.log("Fee recipient set to:", deployer);
-        console.log("Deployer address:", deployer);
+        console.log("Fee recipient set to: 0x63470E56eFeB1759F3560500fB2d2FD43A86F179");
+        console.log("Deployer address:", vm.addr(deployerPrivateKey));
         
         // Log contract details
         console.log("Platform fee:", escrowUSDC.platformFeeBps(), "basis points (0.25%)");

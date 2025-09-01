@@ -5,9 +5,10 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
+import "./interfaces/IIDRX.sol";
 
 /*
-███╗░░░███╗░█████╗░██╗░░░██╗░█████╗░
+███╗░░░███╗░█████╗░██╗░░░██║░█████╗░
 ████╗░████║██╔══██╗██║░░░██║██╔══██╗
 ██╔████╔██║██║░░██║╚██╗░██╔╝██║░░██║
 ██║╚██╔╝██║██║░░██║░╚████╔╝░██║░░██║
@@ -18,8 +19,20 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
 /**
  * @title EscrowIDRX
  * @dev Smart contract for IDRX escrow system with crypto and fiat withdrawal features
- * Crypto: IDRX directly to receiver wallet
- * Fiat: Frontend handles burning IDRX, escrow only confirms and tracks
+ * 
+ * ARCHITECTURE:
+ * - Crypto Withdrawal: IDRX directly to receiver wallet
+ * - Fiat Withdrawal: Smart contract burns IDRX, frontend handles redeem via IDRX API
+ * 
+ * FLOW FOR FIAT WITHDRAWAL:
+ * 1. User calls withdrawIDRXToFiat() with bank account number
+ * 2. Smart contract burns IDRX via burnWithAccountNumber()
+ * 3. Frontend gets transaction hash from burning
+ * 4. Frontend calls IDRX API (/api/transaction/redeem-request) with tx hash
+ * 5. IDRX.co processes fiat withdrawal to bank account
+ * 
+ * Note: This contract only handles the burning part. Frontend must integrate with IDRX API
+ * for complete fiat withdrawal functionality.
  */
 contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
     
@@ -31,10 +44,6 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
         uint256 withdrawnAmount;     // Amount already withdrawn
         bool hasWithdrawn;           // Has withdrawn or not
         bool isActive;               // Receiver still active or already refunded
-        address depositWallet;       // For crypto withdrawal
-        string hashedAccountNumber;  // For IDRX fiat withdrawal
-        bool withdrawalTypeSet;      // Has set withdrawal type or not
-        WithdrawalType withdrawalType; // Type of withdrawal
     }
     
     struct EscrowRoom {
@@ -51,13 +60,6 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
         uint256 activeReceiverCount; // Number of active receivers
     }
     
-    // ============ ENUMS ============
-    
-    enum WithdrawalType {
-        CRYPTO,  // 0 - IDRX to wallet
-        FIAT     // 1 - IDRX burn for fiat
-    }
-    
     // ============ STATE VARIABLES ============
     
     mapping(bytes32 => EscrowRoom) public escrowRooms;
@@ -65,14 +67,14 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
     mapping(address => bytes32[]) public receiverEscrows; // Receiver escrows
     
     // IDRX contract address
-    address public constant IDRX_ADDRESS = 0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22; // IDRX Base Mainnet
+    address public constant IDRX_ADDRESS = 0x29Fc20a600B2392b8b659CBD47eAcA44F9Fb71B0; // Mock IDRX Base Testnet
     
     // Platform fee (in basis points, 100 = 1%)
     uint256 public platformFeeBps = 25; // 0.25%
-    address public feeRecipient;
+    address public feeRecipient = 0x63470E56eFeB1759F3560500fB2d2FD43A86F179;
     
     // Minimum and maximum amounts (2 decimals)
-    uint256 public minEscrowAmount = 2000 * 10**2; // 20,000 IDRX
+    uint256 public minEscrowAmount = 20000 * 10**2; // 20,000 IDRX
     uint256 public maxEscrowAmount = 1000000000 * 10**2; // 1B IDRX
     
     // ============ EVENTS ============
@@ -99,14 +101,6 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
         uint256 amount
     );
     
-    event WithdrawalTypeSet(
-        bytes32 indexed escrowId,
-        address indexed receiver,
-        WithdrawalType withdrawalType,
-        address depositWallet,
-        string hashedAccountNumber
-    );
-    
     event IDRXWithdrawn(
         bytes32 indexed escrowId,
         address indexed receiver,
@@ -118,8 +112,7 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
         bytes32 indexed escrowId,
         address indexed receiver,
         uint256 amount,
-        string hashedAccountNumber,
-        uint256 burnTxHash
+        string hashedAccountNumber
     );
     
     event ReceiverRefunded(
@@ -159,8 +152,8 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
     
     // ============ CONSTRUCTOR ============
     
-    constructor(address _feeRecipient) Ownable(msg.sender) {
-        feeRecipient = _feeRecipient;
+    constructor() Ownable(msg.sender) {
+        // feeRecipient already set to default value
     }
     
     // ============ MAIN FUNCTIONS ============
@@ -214,11 +207,7 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
                 maxAmount: _amounts[i],
                 withdrawnAmount: 0,
                 hasWithdrawn: false,
-                isActive: true,
-                depositWallet: address(0),
-                hashedAccountNumber: "",
-                withdrawalTypeSet: false,
-                withdrawalType: WithdrawalType.CRYPTO // Default
+                isActive: true
             });
             
             room.receiverAddresses.push(_receivers[i]);
@@ -254,51 +243,9 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
     }
     
     /**
-     * @dev Set withdrawal type for receiver
+     * @dev Withdraw IDRX to crypto wallet (receiver's own wallet)
      * @param _escrowId ID of escrow room
-     * @param _withdrawalType Type of withdrawal (0 = crypto, 1 = fiat)
-     * @param _withdrawalData Data for withdrawal (wallet address for crypto, hashed account number for fiat)
-     */
-    function setWithdrawalType(
-        bytes32 _escrowId,
-        WithdrawalType _withdrawalType,
-        string memory _withdrawalData
-    ) external whenNotPaused escrowExists(_escrowId) escrowActive(_escrowId) {
-        EscrowRoom storage room = escrowRooms[_escrowId];
-        Receiver storage receiver = room.receivers[msg.sender];
-        
-        require(receiver.receiverAddress == msg.sender, "Not authorized receiver");
-        require(receiver.isActive, "Receiver is not active");
-        require(!receiver.withdrawalTypeSet, "Withdrawal type already set");
-        require(!receiver.hasWithdrawn, "Already withdrawn");
-        
-        receiver.withdrawalTypeSet = true;
-        receiver.withdrawalType = _withdrawalType;
-        
-        if (_withdrawalType == WithdrawalType.CRYPTO) {
-            // For crypto withdrawal (IDRX to wallet)
-            address depositWallet = address(uint160(bytes20(bytes(_withdrawalData))));
-            require(depositWallet != address(0), "Invalid deposit wallet address");
-            receiver.depositWallet = depositWallet;
-        } else if (_withdrawalType == WithdrawalType.FIAT) {
-            // For fiat withdrawal (IDRX burn for fiat)
-            require(bytes(_withdrawalData).length > 0, "Hashed account number required");
-            receiver.hashedAccountNumber = _withdrawalData;
-        }
-        
-        emit WithdrawalTypeSet(
-            _escrowId,
-            msg.sender,
-            _withdrawalType,
-            receiver.depositWallet,
-            receiver.hashedAccountNumber
-        );
-    }
-    
-    /**
-     * @dev Withdraw IDRX to crypto wallet
-     * @param _escrowId ID of escrow room
-     * @param _amount Amount of IDRX to withdraw
+     * @param _amount Total amount of IDRX to withdraw (fee will be deducted from this amount)
      */
     function withdrawIDRXToCrypto(
         bytes32 _escrowId,
@@ -309,12 +256,10 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
         
         require(receiver.receiverAddress == msg.sender, "Not authorized receiver");
         require(receiver.isActive, "Receiver is not active");
-        require(receiver.withdrawalTypeSet, "Withdrawal type not set");
-        require(receiver.withdrawalType == WithdrawalType.CRYPTO, "Not crypto withdrawal");
-        require(receiver.depositWallet != address(0), "Deposit wallet not set");
         require(_amount > 0, "Amount must be greater than 0");
         require(_amount <= receiver.maxAmount - receiver.withdrawnAmount, "Amount exceeds available balance");
         
+        // Calculate fee from the total amount
         uint256 fee = (_amount * platformFeeBps) / 10000;
         uint256 netAmount = _amount - fee;
         
@@ -329,43 +274,57 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
         IERC20 idrx = IERC20(IDRX_ADDRESS);
         
         // Transfer IDRX to crypto wallet
-        require(idrx.transfer(receiver.depositWallet, netAmount), "Transfer to crypto wallet failed");
+        require(idrx.transfer(msg.sender, netAmount), "Transfer to crypto wallet failed");
         
         // Transfer fee to platform
         if (fee > 0) {
             require(idrx.transfer(feeRecipient, fee), "Fee transfer failed");
         }
         
-        emit IDRXWithdrawn(_escrowId, msg.sender, _amount, receiver.depositWallet);
+        emit IDRXWithdrawn(_escrowId, msg.sender, _amount, msg.sender);
         
         // Check if all receivers have withdrawn
         _checkAndCompleteEscrow(_escrowId);
     }
     
     /**
-     * @dev Frontend calls IDRX contract to burn, then escrow updates status
+     * @dev Withdraw IDRX to fiat (smart contract burns IDRX, frontend handles redeem)
+     * 
+     * IMPORTANT: This function burns IDRX tokens using hashedAccountNumber from backend.
+     * The actual fiat withdrawal must be handled by the frontend calling IDRX API after this transaction.
+     * 
+     * FLOW:
+     * 1. Backend generates hashedAccountNumber from bank account details
+     * 2. This function burns IDRX via burnWithAccountNumber(amount, hashedAccountNumber)
+     * 3. Frontend gets transaction hash from burning
+     * 4. Frontend calls IDRX API: POST /api/transaction/redeem-request
+     * 5. IDRX.co processes fiat withdrawal to bank account
+     * 
+     * PARAMETERS for IDRX.burnWithAccountNumber():
+     * - amount: _amount (IDRX amount to burn)
+     * - accountNumber: _hashedAccountNumber (hash dari backend)
+     * 
+     * Note: User address (_user) is automatically determined by IDRX contract
+     * 
      * @param _escrowId ID of escrow room
-     * @param _amount Amount of IDRX already burned by frontend
-     * @param _burnTxHash Hash of burn transaction from frontend
+     * @param _amount Total amount of IDRX to withdraw to fiat (fee will be deducted from this amount)
+     * @param _hashedAccountNumber Hashed bank account number generated by backend
      */
-    function confirmIDRXBurnForFiat(
+    function withdrawIDRXToFiat(
         bytes32 _escrowId,
         uint256 _amount,
-        uint256 _burnTxHash
+        string memory _hashedAccountNumber
     ) external nonReentrant whenNotPaused escrowExists(_escrowId) escrowActive(_escrowId) {
         EscrowRoom storage room = escrowRooms[_escrowId];
         Receiver storage receiver = room.receivers[msg.sender];
         
         require(receiver.receiverAddress == msg.sender, "Not authorized receiver");
         require(receiver.isActive, "Receiver is not active");
-        require(receiver.withdrawalTypeSet, "Withdrawal type not set");
-        require(receiver.withdrawalType == WithdrawalType.FIAT, "Not fiat withdrawal");
-        require(bytes(receiver.hashedAccountNumber).length > 0, "Hashed account number not set");
         require(_amount > 0, "Amount must be greater than 0");
         require(_amount <= receiver.maxAmount - receiver.withdrawnAmount, "Amount exceeds available balance");
         
+        // Calculate fee from the total amount
         uint256 fee = (_amount * platformFeeBps) / 10000;
-        uint256 netAmount = _amount - fee;
         
         receiver.withdrawnAmount += _amount;
         room.withdrawnAmount += _amount;
@@ -375,18 +334,36 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
             receiver.hasWithdrawn = true;
         }
         
+        // STEP 1: Smart contract burns IDRX using IIDRX interface
+        // This destroys the tokens and makes them available for fiat conversion
+        // Backend provides hashedAccountNumber for IDRX.co processing
+        IIDRX idrx = IIDRX(IDRX_ADDRESS);
+        idrx.burnWithAccountNumber(
+            _amount,                 // Amount yang di-burn
+            _hashedAccountNumber     // Hash dari backend
+        );
+        
+        // STEP 2: Frontend must now call IDRX API to complete fiat withdrawal
+        // API endpoint: POST /api/transaction/redeem-request
+        // Required params: txHash (from this transaction), amount, bank details
+        // Note: IDRX.burnWithAccountNumber() called with correct parameters:
+        // - amount: _amount (IDRX amount to burn)
+        // - accountNumber: _hashedAccountNumber (hash dari backend)
+        // User address (_user) is automatically determined by IDRX contract
+        
         // Transfer fee to platform (fee taken from escrow balance)
         if (fee > 0) {
-            IERC20 idrx = IERC20(IDRX_ADDRESS);
-            require(idrx.transfer(feeRecipient, fee), "Fee transfer failed");
+            IERC20 idrxERC20 = IERC20(IDRX_ADDRESS);
+            require(idrxERC20.transfer(feeRecipient, fee), "Fee transfer failed");
         }
         
+        // Emit event for burning completion
+        // Frontend should listen to this event to proceed with IDRX API call
         emit IDRXBurnedForFiat(
             _escrowId,
             msg.sender,
             _amount,
-            receiver.hashedAccountNumber,
-            _burnTxHash
+            _hashedAccountNumber
         );
         
         // Check if all receivers have withdrawn
@@ -488,22 +465,14 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
         uint256 maxAmount,
         uint256 withdrawnAmount,
         bool hasWithdrawn,
-        bool isActive,
-        address depositWallet,
-        string memory hashedAccountNumber,
-        bool withdrawalTypeSet,
-        WithdrawalType withdrawalType
+        bool isActive
     ) {
         Receiver storage receiver = escrowRooms[_escrowId].receivers[_receiver];
         return (
             receiver.maxAmount,
             receiver.withdrawnAmount,
             receiver.hasWithdrawn,
-            receiver.isActive,
-            receiver.depositWallet,
-            receiver.hashedAccountNumber,
-            receiver.withdrawalTypeSet,
-            receiver.withdrawalType
+            receiver.isActive
         );
     }
     
@@ -523,9 +492,6 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
      */
     function getAllocation(bytes32 _escrowId, address _receiver) external view returns (uint256 allocation) {
         Receiver storage receiver = escrowRooms[_escrowId].receivers[_receiver];
-        if (!receiver.isActive) {
-            return 0;
-        }
         return receiver.maxAmount;
     }
     

@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 
 /*
-███╗░░░███╗░█████╗░██╗░░░██╗░█████╗░
+███╗░░░███╗░█████╗░██╗░░░██║░█████╗░
 ████╗░████║██╔══██╗██║░░░██║██╔══██╗
 ██╔████╔██║██║░░██║╚██╗░██╔╝██║░░██║
 ██║╚██╔╝██║██║░░██║░╚████╔╝░██║░░██║
@@ -17,9 +17,21 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
 
 /**
  * @title EscrowUSDC
- * @dev Smart contract for USDC escrow system with crypto and fiat withdrawal features
- * Crypto: USDC directly to wallet
- * Fiat: USDC to backend deposit wallet, backend handles redeem to fiat
+ * @dev Smart contract for USDC escrow system designed for long-term usage
+ * 
+ * FEATURES:
+ * - Long-term escrow that can be reused for recurring payments
+ * - Add/remove receivers dynamically
+ * - Edit amounts for existing receivers
+ * - Top-up funds to existing escrow
+ * - Monthly/periodic payment cycles
+ * - Crypto and fiat withdrawal options
+ * 
+ * USE CASE EXAMPLE:
+ * - January: 5 receivers, 200 USDC each, total 1000 USDC
+ * - February: Same 5 receivers, same amounts, top-up 1000 USDC
+ * - March: Increase each receiver by 100 USDC (300 USDC each), top-up 1500 USDC
+ * - Receiver bisa withdraw kapan saja sesuai alokasi (tidak ada batasan cycle)
  */
 contract EscrowUSDC is ReentrancyGuard, Ownable, Pausable {
     
@@ -27,34 +39,23 @@ contract EscrowUSDC is ReentrancyGuard, Ownable, Pausable {
     
     struct Receiver {
         address receiverAddress;
-        uint256 maxAmount;           // Max amount that can be withdrawn
-        uint256 withdrawnAmount;     // Amount already withdrawn
-        bool hasWithdrawn;           // Has withdrawn or not
-        bool isActive;               // Receiver still active or already refunded
-        address depositWallet;       // For crypto withdrawal or fiat deposit wallet
-        bool withdrawalTypeSet;      // Has set withdrawal type or not
-        WithdrawalType withdrawalType; // Type of withdrawal
+        uint256 currentAllocation;    // Current allocation amount
+        uint256 withdrawnAmount;      // Total amount withdrawn
+        bool isActive;                // Receiver still active
     }
     
     struct EscrowRoom {
         address sender;
-        uint256 totalAmount;
-        uint256 withdrawnAmount;
-        uint256 depositedAmount;
-        uint256 refundedAmount;      // Total amount already refunded
+        uint256 totalAllocatedAmount;     // Total amount allocated to all receivers
+        uint256 totalDepositedAmount;     // Total amount deposited by sender
+        uint256 totalWithdrawnAmount;     // Total amount withdrawn
+        uint256 availableBalance;         // Available balance for withdrawals (hanya dari topUpFunds)
         bool isActive;
-        bool isCompleted;
         uint256 createdAt;
+        uint256 lastTopUpAt;             // Last time funds were added
         mapping(address => Receiver) receivers;
         address[] receiverAddresses;
-        uint256 activeReceiverCount; // Number of active receivers
-    }
-    
-    // ============ ENUMS ============
-    
-    enum WithdrawalType {
-        CRYPTO,  // 0 - USDC to wallet
-        FIAT     // 1 - USDC to backend deposit wallet
+        uint256 activeReceiverCount;
     }
     
     // ============ STATE VARIABLES ============
@@ -64,14 +65,14 @@ contract EscrowUSDC is ReentrancyGuard, Ownable, Pausable {
     mapping(address => bytes32[]) public receiverEscrows; // Receiver escrows
     
     // USDC contract address
-    address public constant USDC_ADDRESS = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913; // USDC Base Mainnet
+    address public constant USDC_ADDRESS = 0x7c1674812f7AB1bbaDAf80046f0b7C6b85E03aE3; // USDC Base testnet
     
     // Platform fee (in basis points, 100 = 1%)
     uint256 public platformFeeBps = 25; // 0.25%
-    address public feeRecipient;
+    address public feeRecipient = 0x63470E56eFeB1759F3560500fB2d2FD43A86F179;
     
     // Minimum and maximum amounts (6 decimals)
-    uint256 public minEscrowAmount = 1000 * 10**6; // 1000 USDC
+    uint256 public minEscrowAmount = 2 * 10**6; // 2 USDC
     uint256 public maxEscrowAmount = 1000000 * 10**6; // 1M USDC
     
     // ============ EVENTS ============
@@ -85,31 +86,44 @@ contract EscrowUSDC is ReentrancyGuard, Ownable, Pausable {
         uint256[] amounts
     );
     
-    event Allocation(
-        bytes32 indexed escrowId,
-        address indexed receiver,
-        uint256 maxAmount,
-        uint256 createdAt
-    );
-    
-    event FundsDeposited(
+    event FundsTopUp(
         bytes32 indexed escrowId,
         address indexed sender,
-        uint256 amount
+        uint256 amount,
+        uint256 newCycleBalance,
+        uint256 cycleNumber
     );
     
-    event WithdrawalTypeSet(
+    event ReceiverAdded(
         bytes32 indexed escrowId,
         address indexed receiver,
-        WithdrawalType withdrawalType,
-        address depositWallet
+        uint256 amount,
+        uint256 cycleNumber
     );
+    
+    event ReceiverRemoved(
+        bytes32 indexed escrowId,
+        address indexed receiver,
+        uint256 refundAmount,
+        uint256 cycleNumber
+    );
+    
+    event ReceiverAmountUpdated(
+        bytes32 indexed escrowId,
+        address indexed receiver,
+        uint256 oldAmount,
+        uint256 newAmount,
+        uint256 cycleNumber
+    );
+    
+
     
     event USDCWithdrawn(
         bytes32 indexed escrowId,
         address indexed receiver,
         uint256 amount,
-        address depositWallet
+        address depositWallet,
+        uint256 cycleNumber
     );
     
     event USDCWithdrawnToFiat(
@@ -117,25 +131,19 @@ contract EscrowUSDC is ReentrancyGuard, Ownable, Pausable {
         address indexed receiver,
         uint256 amount,
         address depositWallet,
-        string hashedAccountNumber
+        uint256 cycleNumber
     );
     
-    event ReceiverRefunded(
-        bytes32 indexed escrowId,
-        address indexed receiver,
-        uint256 refundAmount,
-        address indexed sender
-    );
-    
-    event EscrowCompleted(
-        bytes32 indexed escrowId,
-        uint256 totalWithdrawn
-    );
-    
-    event EscrowCancelled(
+    event EscrowPaused(
         bytes32 indexed escrowId,
         address indexed sender,
-        uint256 refundAmount
+        uint256 remainingBalance
+    );
+    
+    event EscrowResumed(
+        bytes32 indexed escrowId,
+        address indexed sender,
+        uint256 cycleBalance
     );
     
     // ============ MODIFIERS ============
@@ -155,16 +163,26 @@ contract EscrowUSDC is ReentrancyGuard, Ownable, Pausable {
         _;
     }
     
+    modifier receiverExists(bytes32 _escrowId, address _receiver) {
+        require(escrowRooms[_escrowId].receivers[_receiver].receiverAddress != address(0), "Receiver does not exist");
+        _;
+    }
+    
+    modifier receiverActive(bytes32 _escrowId, address _receiver) {
+        require(escrowRooms[_escrowId].receivers[_receiver].isActive, "Receiver is not active");
+        _;
+    }
+    
     // ============ CONSTRUCTOR ============
     
-    constructor(address _feeRecipient) Ownable(msg.sender) {
-        feeRecipient = _feeRecipient;
+    constructor() Ownable(msg.sender) {
+        // feeRecipient already set to default value
     }
     
     // ============ MAIN FUNCTIONS ============
     
     /**
-     * @dev Create new escrow room with multiple receivers and directly deposit USDC
+     * @dev Create new escrow room with multiple receivers
      * @param _receivers Array of receiver addresses
      * @param _amounts Array of amounts for each receiver
      * @return escrowId ID of the created escrow
@@ -182,7 +200,7 @@ contract EscrowUSDC is ReentrancyGuard, Ownable, Pausable {
         }
         
         // Check minimum and maximum amounts
-        require(totalAmount >= minEscrowAmount, "Amount below minimum (1000 USDC)");
+        require(totalAmount >= minEscrowAmount, "Amount below minimum (2 USDC)");
         require(totalAmount <= maxEscrowAmount, "Amount above maximum (1M USDC)");
         
         bytes32 escrowId = keccak256(
@@ -197,44 +215,30 @@ contract EscrowUSDC is ReentrancyGuard, Ownable, Pausable {
         
         EscrowRoom storage room = escrowRooms[escrowId];
         room.sender = msg.sender;
-        room.totalAmount = totalAmount;
+        room.totalAllocatedAmount = totalAmount;
+        room.availableBalance = 0;  // Mulai dari 0, tidak ada dana di escrow
         room.isActive = true;
         room.createdAt = block.timestamp;
+        room.lastTopUpAt = block.timestamp;
         room.activeReceiverCount = _receivers.length;
         
-        // Add receivers with max amount
+        // Add receivers
         for (uint256 i = 0; i < _receivers.length; i++) {
             require(_receivers[i] != address(0), "Invalid receiver address");
             require(_amounts[i] > 0, "Amount must be greater than 0");
             
             room.receivers[_receivers[i]] = Receiver({
                 receiverAddress: _receivers[i],
-                maxAmount: _amounts[i],
+                currentAllocation: _amounts[i],
                 withdrawnAmount: 0,
-                hasWithdrawn: false,
-                isActive: true,
-                depositWallet: address(0),
-                withdrawalTypeSet: false,
-                withdrawalType: WithdrawalType.CRYPTO // Default
+                isActive: true
             });
             
             room.receiverAddresses.push(_receivers[i]);
             receiverEscrows[_receivers[i]].push(escrowId);
-            
-            emit Allocation(
-                escrowId,
-                _receivers[i],
-                _amounts[i],
-                block.timestamp
-            );
         }
         
         userEscrows[msg.sender].push(escrowId);
-        
-        // Directly deposit USDC to escrow
-        IERC20 usdc = IERC20(USDC_ADDRESS);
-        require(usdc.transferFrom(msg.sender, address(this), totalAmount), "Transfer to escrow failed");
-        room.depositedAmount = totalAmount;
         
         emit EscrowCreated(
             escrowId,
@@ -245,55 +249,143 @@ contract EscrowUSDC is ReentrancyGuard, Ownable, Pausable {
             _amounts
         );
         
-        emit FundsDeposited(escrowId, msg.sender, totalAmount);
-        
         return escrowId;
     }
     
     /**
-     * @dev Set withdrawal type for receiver
+     * @dev Top-up funds to existing escrow for new payment cycle
      * @param _escrowId ID of escrow room
-     * @param _withdrawalType Type of withdrawal (0 = crypto, 1 = fiat)
-     * @param _withdrawalData Data for withdrawal (wallet address for crypto, deposit wallet address for fiat)
+     * @param _amount Amount of USDC to add
      */
-    function setWithdrawalType(
+    function topUpFunds(
         bytes32 _escrowId,
-        WithdrawalType _withdrawalType,
-        string memory _withdrawalData
-    ) external whenNotPaused escrowExists(_escrowId) escrowActive(_escrowId) {
+        uint256 _amount
+    ) external nonReentrant whenNotPaused escrowExists(_escrowId) escrowActive(_escrowId) onlyEscrowSender(_escrowId) {
+        require(_amount > 0, "Amount must be greater than 0");
+        require(_amount <= maxEscrowAmount, "Amount above maximum (1M USDC)");
+        
         EscrowRoom storage room = escrowRooms[_escrowId];
-        Receiver storage receiver = room.receivers[msg.sender];
         
-        require(receiver.receiverAddress == msg.sender, "Not authorized receiver");
-        require(receiver.isActive, "Receiver is not active");
-        require(!receiver.withdrawalTypeSet, "Withdrawal type already set");
-        require(!receiver.hasWithdrawn, "Already withdrawn");
+        // Transfer USDC to escrow
+        IERC20 usdc = IERC20(USDC_ADDRESS);
+        require(usdc.transferFrom(msg.sender, address(this), _amount), "Transfer to escrow failed");
         
-        receiver.withdrawalTypeSet = true;
-        receiver.withdrawalType = _withdrawalType;
+        room.totalDepositedAmount += _amount;
+        room.availableBalance += _amount;  // Balance tersedia untuk withdrawal
+        room.lastTopUpAt = block.timestamp;
         
-        if (_withdrawalType == WithdrawalType.CRYPTO) {
-            // For crypto withdrawal (USDC to wallet)
-            address depositWallet = address(uint160(bytes20(bytes(_withdrawalData))));
-            require(depositWallet != address(0), "Invalid deposit wallet address");
-            receiver.depositWallet = depositWallet;
-        } else if (_withdrawalType == WithdrawalType.FIAT) {
-            // For fiat withdrawal (USDC to backend deposit wallet)
-            address depositWallet = address(uint160(bytes20(bytes(_withdrawalData))));
-            require(depositWallet != address(0), "Invalid deposit wallet address");
-            receiver.depositWallet = depositWallet;
-        }
+        emit FundsTopUp(_escrowId, msg.sender, _amount, room.availableBalance, 0);
+    }
+    
+
+    
+    /**
+     * @dev Add new receiver to existing escrow - bebas tambah receiver tanpa perlu balance
+     * @param _escrowId ID of escrow room
+     * @param _receiver Address of new receiver
+     * @param _amount Amount for new receiver (2-5000 USDC)
+     */
+    function addReceiver(
+        bytes32 _escrowId,
+        address _receiver,
+        uint256 _amount
+    ) external nonReentrant whenNotPaused escrowExists(_escrowId) escrowActive(_escrowId) onlyEscrowSender(_escrowId) {
+        require(_receiver != address(0), "Invalid receiver address");
+        // Validasi amount: minimal 2 USDC, maksimal 5000 USDC
+        require(_amount >= 2 * 10**6, "Amount below minimum (2 USDC)");
+        require(_amount <= 5000 * 10**6, "Amount above maximum (5000 USDC)");
+        require(escrowRooms[_escrowId].receivers[_receiver].receiverAddress == address(0), "Receiver already exists");
         
-        emit WithdrawalTypeSet(
-            _escrowId,
-            msg.sender,
-            _withdrawalType,
-            receiver.depositWallet
-        );
+        EscrowRoom storage room = escrowRooms[_escrowId];
+        
+        // Tambah receiver tanpa perlu balance check
+        room.receivers[_receiver] = Receiver({
+            receiverAddress: _receiver,
+            currentAllocation: _amount,
+            withdrawnAmount: 0,
+            isActive: true
+        });
+        
+        room.receiverAddresses.push(_receiver);
+        room.activeReceiverCount++;
+        room.totalAllocatedAmount += _amount;
+        // Tidak perlu kurangi availableBalance
+        
+        receiverEscrows[_receiver].push(_escrowId);
+        
+        emit ReceiverAdded(_escrowId, _receiver, _amount, 0);
     }
     
     /**
-     * @dev Withdraw USDC to crypto wallet
+     * @dev Remove receiver from escrow - hapus receiver dari array dan mark inactive
+     * @param _escrowId ID of escrow room
+     * @param _receiver Address of receiver to remove
+     */
+    function removeReceiver(
+        bytes32 _escrowId,
+        address _receiver
+    ) external nonReentrant whenNotPaused escrowExists(_escrowId) escrowActive(_escrowId) onlyEscrowSender(_escrowId) {
+        EscrowRoom storage room = escrowRooms[_escrowId];
+        Receiver storage receiver = room.receivers[_receiver];
+        
+        require(receiver.receiverAddress != address(0), "Receiver does not exist");
+        require(receiver.isActive, "Receiver already inactive");
+        
+        uint256 remainingAllocation = receiver.currentAllocation;
+        
+        // Mark receiver as inactive
+        receiver.isActive = false;
+        room.activeReceiverCount--;
+        room.totalAllocatedAmount -= remainingAllocation;
+        
+        // Hapus address dari array receiverAddresses
+        for (uint256 i = 0; i < room.receiverAddresses.length; i++) {
+            if (room.receiverAddresses[i] == _receiver) {
+                // Geser semua element setelah index i ke kiri
+                for (uint256 j = i; j < room.receiverAddresses.length - 1; j++) {
+                    room.receiverAddresses[j] = room.receiverAddresses[j + 1];
+                }
+                // Hapus element terakhir
+                room.receiverAddresses.pop();
+                break;
+            }
+        }
+        
+        emit ReceiverRemoved(_escrowId, _receiver, remainingAllocation, 0);
+    }
+    
+    /**
+     * @dev Update amount for existing receiver - bebas ubah amount tanpa perlu balance
+     * @param _escrowId ID of escrow room
+     * @param _receiver Address of receiver
+     * @param _newAmount New amount for receiver (2-5000 USDC)
+     */
+    function updateReceiverAmount(
+        bytes32 _escrowId,
+        address _receiver,
+        uint256 _newAmount
+    ) external nonReentrant whenNotPaused escrowExists(_escrowId) escrowActive(_escrowId) onlyEscrowSender(_escrowId) {
+        // Validasi amount: minimal 2 USDC, maksimal 5000 USDC
+        require(_newAmount >= 2 * 10**6, "Amount below minimum (2 USDC)");
+        require(_newAmount <= 5000 * 10**6, "Amount above maximum (5000 USDC)");
+        
+        EscrowRoom storage room = escrowRooms[_escrowId];
+        Receiver storage receiver = room.receivers[_receiver];
+        
+        require(receiver.receiverAddress != address(0), "Receiver does not exist");
+        require(receiver.isActive, "Receiver is not active");
+        
+        uint256 oldAmount = receiver.currentAllocation;
+        
+        // Update amount tanpa perlu balance check
+        room.totalAllocatedAmount = room.totalAllocatedAmount - oldAmount + _newAmount;
+        receiver.currentAllocation = _newAmount;
+        
+        emit ReceiverAmountUpdated(_escrowId, _receiver, oldAmount, _newAmount, 0);
+    }
+    
+    /**
+     * @dev Withdraw USDC to crypto wallet (receiver's own wallet)
      * @param _escrowId ID of escrow room
      * @param _amount Amount of USDC to withdraw
      */
@@ -306,172 +398,152 @@ contract EscrowUSDC is ReentrancyGuard, Ownable, Pausable {
         
         require(receiver.receiverAddress == msg.sender, "Not authorized receiver");
         require(receiver.isActive, "Receiver is not active");
-        require(receiver.withdrawalTypeSet, "Withdrawal type not set");
-        require(receiver.withdrawalType == WithdrawalType.CRYPTO, "Not crypto withdrawal");
-        require(receiver.depositWallet != address(0), "Deposit wallet not set");
         require(_amount > 0, "Amount must be greater than 0");
-        require(_amount <= receiver.maxAmount - receiver.withdrawnAmount, "Amount exceeds available balance");
+        require(_amount <= receiver.currentAllocation, "Amount exceeds current allocation");
         
         uint256 fee = (_amount * platformFeeBps) / 10000;
         uint256 netAmount = _amount - fee;
         
         receiver.withdrawnAmount += _amount;
-        room.withdrawnAmount += _amount;
-        
-        // Update status if already withdrawn all
-        if (receiver.withdrawnAmount >= receiver.maxAmount) {
-            receiver.hasWithdrawn = true;
-        }
+        room.totalWithdrawnAmount += _amount;
+        room.availableBalance -= _amount;
         
         IERC20 usdc = IERC20(USDC_ADDRESS);
         
-        // Transfer USDC to crypto wallet
-        require(usdc.transfer(receiver.depositWallet, netAmount), "Transfer to crypto wallet failed");
+        // Transfer USDC to receiver's own wallet
+        require(usdc.transfer(msg.sender, netAmount), "Transfer to crypto wallet failed");
         
         // Transfer fee to platform
         if (fee > 0) {
             require(usdc.transfer(feeRecipient, fee), "Fee transfer failed");
         }
         
-        emit USDCWithdrawn(_escrowId, msg.sender, _amount, receiver.depositWallet);
-        
-        // Check if all receivers have withdrawn
-        _checkAndCompleteEscrow(_escrowId);
+        emit USDCWithdrawn(_escrowId, msg.sender, _amount, msg.sender, 0);
     }
     
     /**
-     * @dev Withdraw USDC to fiat (send to deposit wallet created by backend)
+     * @dev Withdraw USDC to fiat (send to deposit wallet provided by frontend)
      * @param _escrowId ID of escrow room
      * @param _amount Amount of USDC to withdraw to fiat
+     * @param _depositWallet Deposit wallet address provided by frontend
      */
     function withdrawUSDCTofiat(
         bytes32 _escrowId,
-        uint256 _amount
+        uint256 _amount,
+        address _depositWallet
     ) external nonReentrant whenNotPaused escrowExists(_escrowId) escrowActive(_escrowId) {
+        require(_depositWallet != address(0), "Invalid deposit wallet address");
+        
         EscrowRoom storage room = escrowRooms[_escrowId];
         Receiver storage receiver = room.receivers[msg.sender];
         
         require(receiver.receiverAddress == msg.sender, "Not authorized receiver");
         require(receiver.isActive, "Receiver is not active");
-        require(receiver.withdrawalTypeSet, "Withdrawal type not set");
-        require(receiver.withdrawalType == WithdrawalType.FIAT, "Not fiat withdrawal");
-        require(receiver.depositWallet != address(0), "Deposit wallet not set");
         require(_amount > 0, "Amount must be greater than 0");
-        require(_amount <= receiver.maxAmount - receiver.withdrawnAmount, "Amount exceeds available balance");
+        require(_amount <= receiver.currentAllocation, "Amount exceeds current allocation");
         
         uint256 fee = (_amount * platformFeeBps) / 10000;
         uint256 netAmount = _amount - fee;
         
         receiver.withdrawnAmount += _amount;
-        room.withdrawnAmount += _amount;
-        
-        // Update status if already withdrawn all
-        if (receiver.withdrawnAmount >= receiver.maxAmount) {
-            receiver.hasWithdrawn = true;
-        }
+        room.totalWithdrawnAmount += _amount;
+        room.availableBalance -= _amount;
         
         IERC20 usdc = IERC20(USDC_ADDRESS);
         
-        // Transfer USDC to deposit wallet created by backend for fiat processing
-        // Backend will handle redeem USDC to fiat through IDRX party
-        require(usdc.transfer(receiver.depositWallet, netAmount), "Transfer to fiat deposit wallet failed");
+        // Transfer USDC to deposit wallet for fiat processing
+        require(usdc.transfer(_depositWallet, netAmount), "Transfer to fiat deposit wallet failed");
         
         // Transfer fee to platform
         if (fee > 0) {
             require(usdc.transfer(feeRecipient, fee), "Fee transfer failed");
         }
         
-        emit USDCWithdrawnToFiat(_escrowId, msg.sender, _amount, receiver.depositWallet, receiver.hashedAccountNumber);
-        
-        // Check if all receivers have withdrawn
-        _checkAndCompleteEscrow(_escrowId);
+        emit USDCWithdrawnToFiat(_escrowId, msg.sender, _amount, _depositWallet, 0);
     }
     
     /**
-     * @dev Refund receiver who made wrong input (only sender can do this)
-     * @param _escrowId ID of escrow room
-     * @param _receiver Address of receiver to refund
-     */
-    function refundReceiver(
-        bytes32 _escrowId,
-        address _receiver
-    ) external nonReentrant whenNotPaused escrowExists(_escrowId) escrowActive(_escrowId) onlyEscrowSender(_escrowId) {
-        EscrowRoom storage room = escrowRooms[_escrowId];
-        Receiver storage receiver = room.receivers[_receiver];
-        
-        require(receiver.receiverAddress != address(0), "Receiver does not exist");
-        require(receiver.isActive, "Receiver already refunded");
-        require(!receiver.hasWithdrawn, "Cannot refund receiver who already withdrew");
-        
-        uint256 refundAmount = receiver.maxAmount;
-        
-        // Update receiver status
-        receiver.isActive = false;
-        room.activeReceiverCount--;
-        room.refundedAmount += refundAmount;
-        
-        // Refund USDC to sender
-        IERC20 usdc = IERC20(USDC_ADDRESS);
-        require(usdc.transfer(room.sender, refundAmount), "Refund transfer failed");
-        
-        emit ReceiverRefunded(_escrowId, _receiver, refundAmount, msg.sender);
-        
-        // Check if escrow should be completed
-        _checkAndCompleteEscrow(_escrowId);
-    }
-    
-    /**
-     * @dev Cancel escrow and refund funds to sender
+     * @dev Pause escrow (sender can pause to stop payments temporarily)
      * @param _escrowId ID of escrow room
      */
-    function cancelEscrow(
+    function pauseEscrow(
         bytes32 _escrowId
-    ) external nonReentrant whenNotPaused escrowExists(_escrowId) onlyEscrowSender(_escrowId) {
+    ) external nonReentrant escrowExists(_escrowId) onlyEscrowSender(_escrowId) {
         EscrowRoom storage room = escrowRooms[_escrowId];
-        
-        require(room.isActive, "Escrow is not active");
+        require(room.isActive, "Escrow already paused");
         
         room.isActive = false;
         
-        uint256 refundAmount = room.totalAmount - room.withdrawnAmount - room.refundedAmount;
+        emit EscrowPaused(_escrowId, msg.sender, room.availableBalance);
+    }
+    
+    /**
+     * @dev Resume escrow (sender can resume after pausing)
+     * @param _escrowId ID of escrow room
+     */
+    function resumeEscrow(
+        bytes32 _escrowId
+    ) external nonReentrant escrowExists(_escrowId) onlyEscrowSender(_escrowId) {
+        EscrowRoom storage room = escrowRooms[_escrowId];
+        require(!room.isActive, "Escrow already active");
         
-        if (refundAmount > 0) {
+        room.isActive = true;
+        
+        emit EscrowResumed(_escrowId, msg.sender, room.availableBalance);
+    }
+    
+    /**
+     * @dev Close escrow permanently and refund remaining balance to sender
+     * @param _escrowId ID of escrow room
+     */
+    function closeEscrow(
+        bytes32 _escrowId
+    ) external nonReentrant escrowExists(_escrowId) onlyEscrowSender(_escrowId) {
+        EscrowRoom storage room = escrowRooms[_escrowId];
+        
+        room.isActive = false;
+        
+        uint256 remainingBalance = room.availableBalance;
+        
+        if (remainingBalance > 0) {
             IERC20 usdc = IERC20(USDC_ADDRESS);
-            require(usdc.transfer(room.sender, refundAmount), "Refund transfer failed");
+            require(usdc.transfer(room.sender, remainingBalance), "Refund transfer failed");
         }
         
-        emit EscrowCancelled(_escrowId, room.sender, refundAmount);
+        emit EscrowPaused(_escrowId, msg.sender, remainingBalance);
     }
     
     // ============ VIEW FUNCTIONS ============
     
     /**
-     * @dev Get escrow details
+     * @dev Get escrow details with receiver addresses
      */
     function getEscrowDetails(bytes32 _escrowId) external view returns (
         address sender,
-        uint256 totalAmount,
-        uint256 withdrawnAmount,
-        uint256 depositedAmount,
-        uint256 refundedAmount,
+        uint256 totalAllocatedAmount,
+        uint256 totalDepositedAmount,
+        uint256 totalWithdrawnAmount,
+        uint256 availableBalance,
         bool isActive,
-        bool isCompleted,
         uint256 createdAt,
+        uint256 lastTopUpAt,
         uint256 receiverCount,
-        uint256 activeReceiverCount
+        uint256 activeReceiverCount,
+        address[] memory receiverAddresses
     ) {
         EscrowRoom storage room = escrowRooms[_escrowId];
         return (
             room.sender,
-            room.totalAmount,
-            room.withdrawnAmount,
-            room.depositedAmount,
-            room.refundedAmount,
+            room.totalAllocatedAmount,
+            room.totalDepositedAmount,
+            room.totalWithdrawnAmount,
+            room.availableBalance,
             room.isActive,
-            room.isCompleted,
             room.createdAt,
+            room.lastTopUpAt,
             room.receiverAddresses.length,
-            room.activeReceiverCount
+            room.activeReceiverCount,
+            room.receiverAddresses
         );
     }
     
@@ -479,23 +551,15 @@ contract EscrowUSDC is ReentrancyGuard, Ownable, Pausable {
      * @dev Get receiver details
      */
     function getReceiverDetails(bytes32 _escrowId, address _receiver) external view returns (
-        uint256 maxAmount,
+        uint256 currentAllocation,
         uint256 withdrawnAmount,
-        bool hasWithdrawn,
-        bool isActive,
-        address depositWallet,
-        bool withdrawalTypeSet,
-        WithdrawalType withdrawalType
+        bool isActive
     ) {
         Receiver storage receiver = escrowRooms[_escrowId].receivers[_receiver];
         return (
-            receiver.maxAmount,
+            receiver.currentAllocation,
             receiver.withdrawnAmount,
-            receiver.hasWithdrawn,
-            receiver.isActive,
-            receiver.depositWallet,
-            receiver.withdrawalTypeSet,
-            receiver.withdrawalType
+            receiver.isActive
         );
     }
     
@@ -503,22 +567,13 @@ contract EscrowUSDC is ReentrancyGuard, Ownable, Pausable {
      * @dev Get withdrawable amount for receiver
      */
     function getWithdrawableAmount(bytes32 _escrowId, address _receiver) external view returns (uint256 withdrawableAmount) {
-        Receiver storage receiver = escrowRooms[_escrowId].receivers[_receiver];
-        if (!receiver.isActive || receiver.hasWithdrawn) {
-            return 0;
-        }
-        return receiver.maxAmount - receiver.withdrawnAmount;
-    }
-    
-    /**
-     * @dev Get allocation for receiver (max amount)
-     */
-    function getAllocation(bytes32 _escrowId, address _receiver) external view returns (uint256 allocation) {
-        Receiver storage receiver = escrowRooms[_escrowId].receivers[_receiver];
+        EscrowRoom storage room = escrowRooms[_escrowId];
+        Receiver storage receiver = room.receivers[_receiver];
+        
         if (!receiver.isActive) {
             return 0;
         }
-        return receiver.maxAmount;
+        return receiver.currentAllocation;
     }
     
     /**
@@ -542,27 +597,21 @@ contract EscrowUSDC is ReentrancyGuard, Ownable, Pausable {
         return receiverEscrows[_receiver];
     }
     
-    // ============ INTERNAL FUNCTIONS ============
-    
     /**
-     * @dev Check and update escrow status
+     * @dev Get escrow balance info
      */
-    function _checkAndCompleteEscrow(bytes32 _escrowId) internal {
+    function getEscrowBalance(bytes32 _escrowId) external view returns (
+        uint256 totalAllocated,
+        uint256 availableBalance,
+        uint256 totalDeposited,
+        uint256 totalWithdrawn
+    ) {
         EscrowRoom storage room = escrowRooms[_escrowId];
-        
-        bool allActiveWithdrawn = true;
-        for (uint256 i = 0; i < room.receiverAddresses.length; i++) {
-            Receiver storage receiver = room.receivers[room.receiverAddresses[i]];
-            if (receiver.isActive && !receiver.hasWithdrawn) {
-                allActiveWithdrawn = false;
-                break;
-            }
-        }
-        
-        if (allActiveWithdrawn && room.activeReceiverCount == 0) {
-            room.isCompleted = true;
-            room.isActive = false;
-            emit EscrowCompleted(_escrowId, room.withdrawnAmount);
-        }
+        return (
+            room.totalAllocatedAmount,
+            room.availableBalance,
+            room.totalDepositedAmount,
+            room.totalWithdrawnAmount
+        );
     }
 }
