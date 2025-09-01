@@ -70,9 +70,10 @@ export const senderListener = async () => {
         if (!tx) throw new Error("Transaction not found");
 
         const timestamp = (await provider.getBlock(tx.blockNumber!))
-          .timestamp.toString();
+          .timestamp.toString
         const receipt = await provider.getTransactionReceipt(event.transactionHash);
 
+        // addTransactionHistory (biar gampang di searchnya wakkwak)
         const transactionHistory = new TransactionHistoryModel({
           txId,
           senderId,

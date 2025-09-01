@@ -43,7 +43,7 @@ export async function addGroup(req: Request, res: Response) {
     
     res.status(201).json({
       message: "New Groupsuccessfully created",
-      payroll: saved,
+      data: saved,
     });
     return;
   } catch (err: any) {
@@ -308,7 +308,7 @@ export async function loadAllGroupTransactionHistory(req: Request, res: Response
   }
 }
 // siapa namanya, berapa total yang dia terima 
-export async function loadDetailedReceiverPaymentHistory(req: Request, res: Response){
+export async function loadSpecifiedGroupTransactionHistory(req: Request, res: Response){
   const {_id, groupId,txId} = req.body;
 
   try {

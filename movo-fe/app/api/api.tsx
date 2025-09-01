@@ -131,6 +131,16 @@ export const loadAllGroupTransactionHistory = async (_id : string) => {
   }  
 }
 
+export const loadSpecifiedGroupTransactionHistory = async (_id : string, groupId : string) => {
+  try{
+      const response = await api.post("/loadAllGroupTransactionHistory", {_id, groupId});
+      return response.data.data
+  }
+  catch(err){
+      console.log(err);
+  }  
+}
+
 export const loadSpecifiedGroup = async (_id: string, groupId: string): Promise<GroupOfUser | null> => {
   try {
     const response = await api.post("/loadSpecifiedGroup", { _id, groupId });
@@ -141,6 +151,16 @@ export const loadSpecifiedGroup = async (_id: string, groupId: string): Promise<
   }
 };
 
+export const loadAllGroup = async (_id : string) => {
+  try{
+      const response = await api.post("/loadAllGroup", {_id});
+      return response.data.data
+  }
+  catch(err){
+      console.log(err);
+  }  
+}
+
 export const addGroup = async (
   _id: string,
   email: string,
@@ -148,7 +168,7 @@ export const addGroup = async (
   nameOfGroup: string
 ) => {
   try {
-    const response = await api.post("/groups/add", {
+    const response = await api.post("/addGroup", {
       _id,
       email,
       groupId,

@@ -1,6 +1,11 @@
+// app/dashboard/sender/[groupId]/page.tsx
+import SenderDashboard from "@/app/components/dashboard/SenderHistoryDashboard";
+export default async function SenderGroupDetailPage({
+  params,
+}: {
+  params: Promise<{ groupId: string }>;
+}) {
+  const { groupId } = await params;
 
-import SenderDashboard from "@/app/components/dashboard/SenderDashboard";
-
-export default function SenderGroupDetailPage({ params }: { params: { groupId: string } }) {
-  return <SenderDashboard groupId={params.groupId} />;
+  return <SenderDashboard groupId={groupId} />;
 }

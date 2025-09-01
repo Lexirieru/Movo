@@ -1,8 +1,8 @@
 import { addBankAccount, changeBankAccount, deleteBankAccount, getBankAccount, getBankAccountFromDatabase, getOrganizationMembers, onBoardingUser} from "../controllers/userGeneralController";
 
 import express, { RequestHandler } from "express";
-import { addReceiverToGroup, loadAllGroupTransactionHistory } from "../controllers/userSenderController";
-import { loadAllWithdrawHistory } from "../controllers/userReceiverController";
+import { addGroup, addReceiverToGroup, loadAllGroup, loadAllGroupTransactionHistory, loadSpecifiedGroup } from "../controllers/userSenderController";
+import { loadAllWithdrawHistory, loadSpecificGroupInformation } from "../controllers/userReceiverController";
 
 const router = express.Router();
 
@@ -52,6 +52,11 @@ const routes: RouteDefinition[] = [
     path: "/deleteBankAccount",
     action: deleteBankAccount,
   },
+  {
+    method: "post",
+    path: "/addGroup",
+    action: addGroup,
+  },
 
   // userSenderController
   {
@@ -69,75 +74,23 @@ const routes: RouteDefinition[] = [
     path: "/loadAllWithdrawHistory",
     action: loadAllWithdrawHistory,
   },
-  
-
-
-//   {
-//     method: "post",
-//     path: "/loadCompanyTransactionHistory",
-//     action: loadCompanyTransactionHistory,
-//   },
-//   {
-//     method: "post",
-//     path: "/loadDetailedEmployeeTransactionHistory",
-//     action: loadDetailedEmployeeTransactionHistory,
-//   },
-//   {
-//     method: "post",
-//     path: "/loadDetailedTransactionHistory",
-//     action: loadDetailedTransactionHistory,
-//   },
-//   {
-//     method: "post",
-//     path: "/addInvoiceData",
-//     action: addInvoiceData,
-//   },
-  
-//   {
-//     method: "post",
-//     path: "/loadInvoiceData",
-//     action: loadInvoiceData,
-//   },
-//   {
-//     method: "post",
-//     path: "/addOrUpdateEmployeeData",
-//     action: addOrUpdateEmployeeData,
-//   },
-
-//   {
-//     method: "post",
-//     path: "/deleteEmployeeDataFromGroup",
-//     action: deleteEmployeeDataFromGroup,
-//   },
-
-//   {
-//     method: "post",
-//     path: "/loadEmployeeDataFromGroup",
-//     action: loadEmployeeDataFromGroup,
-//   },
-
-//   {
-//     method: "post",
-//     path: "/addGroupName",
-//     action: addGroupName,
-//   },
-
-//   {
-//     method: "post",
-//     path: "/loadGroupName",
-//     action: loadGroupName,
-//   },
-
-//   {
-//     method: "post",
-//     path: "/addOrUpdateCompanyStats",
-//     action: addOrUpdateCompanyStats,
-//   },
-//   {
-//     method: "post",
-//     path: "/addOrUpdateCompanyData",
-//     action: addOrUpdateCompanyData,
-//   },
+  {
+    method: "post",
+    path: "/loadAllGroup",
+    action: loadAllGroup,
+  },
+  // sender
+  {
+    method: "post",
+    path: "/loadSpecifiedGroupForSender",
+    action: loadSpecifiedGroup,
+  },
+  // receiver
+  {
+    method: "post",
+    path: "/loadSpecifiedGroupForReceiver",
+    action: loadSpecificGroupInformation,
+  },
 ];
 
 routes.forEach((route) => {

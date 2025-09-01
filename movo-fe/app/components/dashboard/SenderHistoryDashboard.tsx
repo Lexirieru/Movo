@@ -10,9 +10,8 @@ import {
   Filter,
 } from "lucide-react";
 import { useAuth } from "@/lib/userContext";
-import { loadSpecifiedGroup } from "@/app/api/api";
+import { loadSpecifiedGroup, loadSpecifiedGroupTransactionHistory } from "@/app/api/api";
 import { GroupOfUser, ReceiverInGroup } from "@/types/receiverInGroupTemplate";
-import CreateStreamModal from "./sender/CreateStreamModal";
 
 interface Stream {
   id: string;
@@ -42,40 +41,36 @@ export default function SenderDashboard({
   );
 
   useEffect(() => {
-    if (loading || !user?._id || hasFetched) return;
+  if (loading || !user?._id || hasFetched) return;
 
-    const fetchGroupStreams = async () => {
-      try {
-        const group: GroupOfUser | null = await loadSpecifiedGroup(
-          user._id,
-          groupId
-        );
+  const fetchGroupStreams = async () => {
+    try {
+      const response = await loadSpecifiedGroupTransactionHistory(
+        user._id,
+        groupId
+      );
+      console.log(response)
+      if (!response || !response.data) return;
+      console.log(response)
+      // mapping data backend ke bentuk Stream[]
+      const mappedStreams: Stream[] = response.data.map((r: any, idx: number) => ({
+        id: r._id || `stream-${idx}`,
+        token: r.tokenSymbol || "Unknown",
+        tokenIcon: r.tokenIcon || "",
+        recipient: r.name || r.walletAddress || "Unknown",
+        totalAmount: r.totalAmount || 0,
+        totalSent: r.totalSent || 0,
+      }));
 
-        if (!group) return;
+      setStreams(mappedStreams);
+      setHasFetched(true);
+    } catch (err) {
+      console.error("Failed to fetch specified group streams", err);
+    }
+  };
 
-        const mappedStreams: Stream[] = (group.Receivers || []).map(
-          (receiver: ReceiverInGroup, i: number) => ({
-            id: receiver._id || `${i}`,
-            token:
-              typeof receiver.originCurrency === "string"
-                ? receiver.originCurrency
-                : receiver.originCurrency?.address || "USDC",
-            tokenIcon: "💰",
-            recipient: receiver.depositWalletAddress || "Unknown",
-            totalAmount: receiver.amount || 0,
-            totalSent: 0,
-          })
-        );
-
-        setStreams(mappedStreams);
-        setHasFetched(true);
-      } catch (err) {
-        console.error("Failed to fetch specified group streams", err);
-      }
-    };
-
-    fetchGroupStreams();
-  }, [loading, user, hasFetched, groupId]);
+  fetchGroupStreams();
+}, [loading, user, hasFetched, groupId]);
 
   // Filter streams
   const filteredStreams = streams.filter((s) => {
@@ -281,13 +276,6 @@ export default function SenderDashboard({
           </div>
         )}
       </div>
-
-      {/* Create Stream Modal */}
-      <CreateStreamModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onCreateStream={(s) => setStreams([s, ...streams])}
-      />
     </div>
   );
 }

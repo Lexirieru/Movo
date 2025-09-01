@@ -3,14 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/userContext";
-import { loadAllGroupTransactionHistory, addGroup } from "@/app/api/api";
+import { addGroup } from "@/app/api/api";
 import { GroupOfUser } from "@/types/receiverInGroupTemplate";
 import GroupStatsCards from "./groups/GroupsStatsCards";
 import GroupFilterBar from "./groups/GroupFilterBar";
 import GroupList from "./groups/GroupList";
 import { X, Users, Plus } from "lucide-react";
 import CreateGroupModal from "./groups/CreateGroupModal";
-
+import { loadAllGroup } from "@/app/api/api";
 interface GroupDashboardProps {
   onGroupSelect?: (groupId: string) => void;
 }
@@ -28,7 +28,8 @@ export default function GroupDashboard({ onGroupSelect }: GroupDashboardProps) {
     if (loading || !user?._id || hasFetched) return;
     const fetchGroups = async () => {
       try {
-        const groupData = await loadAllGroupTransactionHistory(user._id);
+        const groupData= await loadAllGroup(user._id);
+        console.log(groupData)
         if (Array.isArray(groupData)) {
           const formattedGroups: GroupOfUser[] = groupData.map((g: any) => ({
             ...g,
@@ -55,37 +56,31 @@ export default function GroupDashboard({ onGroupSelect }: GroupDashboardProps) {
 
   const handleCreateGroup = async (groupData: { groupName: string }) => {
     try {
-      // Generate unique group ID
-      const groupId = `group_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const newGroupData = {
-        _id: user?._id || "",
-        email: user?.email || "",
-        groupId,
-        nameOfGroup: groupData.groupName,
+      if(!user._id && !user.email){
+        console.log("Please login first!")
       }
-      // Create new group object
-      const newGroup: GroupOfUser = {
-        groupId,
-        nameOfGroup: groupData.groupName,
-        senderId: user?._id || "",
-        senderName: user?.fullname || "",
-        Receivers: [],
-        totalRecipients: 0,
-        createdAt: new Date().toString(),
-      };
-
-      // Add to local state immediately for better UX
-      setGroups(prev => [newGroup, ...prev]);
-      
-      const response = await addGroup(newGroupData._id, newGroupData.email, newGroupData.groupId, newGroupData.nameOfGroup)
-
-      if(response && response.payroll){
-        setIsCreateModalOpen(false)
-        router.push(`/dashboard/sender/${groupId}`);
-      }
-
-      
-      
+      else{
+          // Generate unique group ID
+        const groupId = `group_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        // Create new group object
+        const newGroup: GroupOfUser = {
+          groupId,
+          nameOfGroup: groupData.groupName,
+          senderId: user?._id || "",
+          senderName: user?.fullname || "",
+          Receivers: [],
+          totalRecipients: 0,
+          createdAt: new Date().toString(),
+        };
+        // Add to local state immediately for better UX
+        setGroups(prev => [newGroup, ...prev]);
+        const response = await addGroup(user._id, user.email, groupId, groupData.groupName)
+        console.log(response)
+        if(response && response.data){
+          setIsCreateModalOpen(false)
+          router.push(`/dashboard/sender/${groupId}`);
+        }
+      }      
     } catch (err) {
       console.error("Failed to create group", err);
     //   setGroups(prev => prev.filter(g => g.groupId != groupId))
