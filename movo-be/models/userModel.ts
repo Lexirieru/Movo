@@ -2,25 +2,25 @@ import mongoose, { Schema } from "mongoose";
 
 const UserDataSchema = new Schema(
   {
-    idrxId : {
-      type : String,
-      required : true,
-      unique : true,
-    },
-    bankId : {
-      type : String,
-      required : false,
-      unique : false,
-    },
-    email : {
+    idrxId: {
       type: String,
-      required : true,
-      unique : true,
+      required: true,
+      unique: true,
     },
-    hashedPassword : {
+    bankId: {
       type: String,
-      required : true,
-      unique : true,
+      required: false,
+      unique: false,
+    },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+    hashedPassword: {
+      type: String,
+      required: true,
+      unique: true,
     },
     fullname: {
       type: String,
@@ -33,22 +33,21 @@ const UserDataSchema = new Schema(
     apiKey: {
       type: String,
       required: true,
-      unique : true,
+      unique: true,
     },
     secretKey: {
       type: String,
       required: true,
-      unique : true,
+      unique: true,
     },
-    // wallet yang digenerate oleh IDRX
-    depositWalletAddress :{
+    depositWalletAddress: {
       type: String,
       required: false,
-      unique : false,
+      unique: false,
     },
-    hashBankAccountNumber : {
-      type : String,
-      required : false
+    hashBankAccountNumber: {
+      type: String,
+      required: false,
     },
     bankAccountNumber: {
       type: String,
@@ -62,20 +61,30 @@ const UserDataSchema = new Schema(
       type: Number,
       required: false,
     },
-    bankName : {
-      type : String,
-      required : false,
+    bankName: {
+      type: String,
+      required: false,
     },
-    // total jumlah uang sisa yang belum diwithdraw
     availableBalance: {
       type: Number,
       required: false,
     },
+    ListOfRegisteredBankAccount: [
+      {
+        bankAccountNumber: { type: String, required: true },
+        bankAccountName: { type: String, required: true },
+        bankCode: { type: Number, required: true },
+        bankName: { type: String, required: true },
+        createdAt: { type: Date, default: Date.now }, // optional
+      },
+    ],
   },
   {
     timestamps: true, // createdAt, updatedAt
   }
 );
+
+
 
 export const UserModel = mongoose.model("UserData", UserDataSchema);
 

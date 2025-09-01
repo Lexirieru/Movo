@@ -1,5 +1,6 @@
 import { GroupOfUser, ReceiverInGroup } from "@/types/receiverInGroupTemplate";
 import { Users, Send, CheckCircle2 } from "lucide-react";
+import { g } from "motion/react-client";
 
 interface GroupStatsCardsProps {
   groups: GroupOfUser[];
@@ -12,7 +13,7 @@ const getTotalAmount = (receivers: ReceiverInGroup[] | undefined | null): number
 
 export default function GroupStatsCards({ groups }: GroupStatsCardsProps) {
   const totalGroups = groups.length;
-  const totalRecipients = groups.reduce((acc, g) => acc + (g.totalRecipients || g.Receivers?.length || 0), 0);
+  const totalRecipients = groups.reduce((acc, g) => acc + (g.Receivers?.length || 0), 0);
   const totalAmount = groups.reduce((acc, g) => acc + getTotalAmount(g.Receivers), 0);
 
   return (

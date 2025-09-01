@@ -18,96 +18,6 @@ import { WithdrawHistoryModel } from "../models/transactionRecordModel";
 dotenv.config();
 
 
-// untuk ngewithdraw balance crypto ke wallet dia / fiat ke rekening dia dan ngeadd withdraw history
-// export async function withdrawAndSaveHistory(req: Request, res: Response) {
-//   // kalok wallet to wallet (crypto non idrx), listen ke sc 
-//   // kalok wallet to fiat {crypto non idrx (usdc/usdt)}, listen ke sc
-//   // kalok wallet to fiat (crypto idrx), backend yang jalanin
-
-//   const {
-//     _id, // receiver id
-//     amount,
-//     walletAddress,
-//     choice, // "fiat" / "crypto"
-//     originCurrency,
-//     targetCurrency,
-//     bankId,
-//     bankName,
-//     bankAccountName,
-//     bankAccountNumber,
-//     depositWalletAddress,
-//   } = req.body;
-
-//   const withdrawId = uuidv4(); // FE bisa generate, tapi biar aman bisa juga backend
-
-//   try {
-//     if (choice === "fiat") {
-//       const path = "https://idrx.co/api/transaction/redeem-request";
-//       const form = { id: _id, amount, walletAddress };
-
-//       const bufferReq = Buffer.from(JSON.stringify(form), "base64").toString("utf8");
-//       const timestamp = Math.round(new Date().getTime()).toString();
-//       const sig = createSignature("POST", path, bufferReq, timestamp, secretKey);
-
-//       const resData = await axios.post(path, form, {
-//         headers: {
-//           "Content-Type": "multipart/form-data",
-//           "idrx-api-key": apiKey,
-//           "idrx-api-sig": sig,
-//           "idrx-api-ts": timestamp,
-//         },
-//       });
-
-//       // simpan ke history
-//       const newHistory = new WithdrawHistoryModel({
-//         withdrawId,
-//         receiverId: _id,
-//         amount,
-//         type: "fiat",
-//         originCurrency,
-//         targetCurrency,
-//         bankId,
-//         bankName,
-//         bankAccountName,
-//         bankAccountNumber,
-//         depositWalletAddress,
-//       });
-//       await newHistory.save();
-
-//       return res.status(200).json({
-//         message: "Withdraw successful & history saved",
-//         withdrawResponse: resData.data,
-//         history: newHistory,
-//       });
-//     } else if (choice === "crypto") {
-//       // misal langsung ke wallet (tanpa idrx)
-//       const newHistory = new WithdrawHistoryModel({
-//         withdrawId,
-//         receiverId: _id,
-//         amount,
-//         type: "crypto",
-//         originCurrency,
-//         targetCurrency,
-//         depositWalletAddress,
-//       });
-//       await newHistory.save();
-
-//       return res.status(200).json({
-//         message: "Crypto withdraw history saved (mocked execution)",
-//         history: newHistory,
-//       });
-//     } else {
-//       return res.status(400).json({ message: "Invalid choice type" });
-//     }
-//   } catch (err: any) {
-//     console.error("Withdraw error:", err);
-//     return res.status(500).json({
-//       message: "Error processing withdraw",
-//       error: err.message,
-//     });
-//   }
-// }
-
 export const receiverListener = async () => {
   if (
     !process.env.LISK_SEPOLIA ||
@@ -133,27 +43,38 @@ export const receiverListener = async () => {
   contract.on(
     "WithdrawApproved",
     async (
+      // wajib dari IDRX untuk redeem
+      txHash : string,
+      networkChainId : string,
+      amountTransfer: string,
+      // bank account number 
+      bankAccount : string,
+      bankCode : string,
+      // nama bank
+      bankName: string,
+      // nama orangnya di bank tersebut
+      bankAccountName: string,
+      walletAddress : string,
+
       withdrawId : string,
       receiverId: string,
-      amount: string,
       choice : string,
       originCurrency: string,
       targetCurrency: string,
       bankId: string,
       depositWalletAddress: string,
-      bankName: string,
-      bankAccountName: string,
-      bankAccountNumber: string,
-      walletAddress : string,
-      networkChainId : string,
+      
       event: string
     ) => {
       console.log(`[EVENT RECEIVED]`);
 
       console.log({
+        txHash,
+        bankAccount,
+        bankCode,
         withdrawId,
         receiverId,
-        amount,
+        amountTransfer,
         choice,
         originCurrency,
         targetCurrency,
@@ -161,7 +82,6 @@ export const receiverListener = async () => {
         depositWalletAddress,
         bankName,
         bankAccountName,
-        bankAccountNumber,
         walletAddress,
         networkChainId
       });      
@@ -173,7 +93,7 @@ export const receiverListener = async () => {
           const withdrawHistory = new WithdrawHistoryModel({
             withdrawId,
             receiverId,
-            amount,
+            amountTransfer,
             choice,
             originCurrency,
             targetCurrency,
@@ -194,7 +114,7 @@ export const receiverListener = async () => {
           const withdrawHistory = new WithdrawHistoryModel({
             withdrawId,
             receiverId,
-            amount,
+            amountTransfer,
             choice,
             originCurrency,
             targetCurrency,
@@ -202,7 +122,7 @@ export const receiverListener = async () => {
             bankId,
             bankName,
             bankAccountName,
-            bankAccountNumber
+            bankAccountNumber : bankAccount
           })
           await withdrawHistory.save();
         }
