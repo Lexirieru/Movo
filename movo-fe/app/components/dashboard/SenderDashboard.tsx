@@ -273,21 +273,56 @@ export default function SenderDashboard({
                   <div className="text-white font-medium">{s.fullname}</div>
                   <div className="text-white/60 text-sm">{s.token}</div>
                 </div>
-                <div>
-                  {s.totalSent >= s.totalAmount ? (
-                    <span className="bg-green-500/20 text-green-400 px-2 py-1 rounded-lg text-xs">
-                      Completed
-                    </span>
-                  ) : (
-                    <span className="bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded-lg text-xs">
-                      Pending
-                    </span>
-                  )}
-                </div>
               </div>
 
-              <div className="text-white text-sm">
+              <div className="text-white text-sm mb-3">
                 Amount: {s.totalAmount} {s.token}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  onClick={() => handleRefund(s._id)}
+                  className="bg-yellow-500 hover:bg-yellow-600 text-white flex items-center justify-center rounded-lg aspect-square w-10 h-10"
+                >
+                  <RotateCcw className="w-5 h-5" />
+                </button>
+                <div className="flex items-center gap-2">
+                  {editingId === s._id ? (
+                    <>
+                      <button
+                        onClick={() => handleSaveAmount(s._id)}
+                        className="bg-green-500 hover:bg-green-600 text-white flex items-center justify-center rounded-lg aspect-square w-10 h-10"
+                      >
+                        <Edit className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => setEditingId(null)}
+                        className="bg-gray-500 hover:bg-gray-600 text-white flex items-center justify-center rounded-lg aspect-square w-10 h-10"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => {
+                          setEditingId(s._id);
+                          setEditAmount(s.totalAmount.toString());
+                        }}
+                        className="bg-blue-500 hover:bg-blue-600 text-white flex items-center justify-center rounded-lg aspect-square w-10 h-10"
+                      >
+                        <Edit className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => handleRemove(s._id)}
+                        className="bg-red-500 hover:bg-red-600 text-white flex items-center justify-center rounded-lg aspect-square w-10 h-10"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           ))}
@@ -343,7 +378,7 @@ export default function SenderDashboard({
                     <td className="p-4">
                       <button
                         onClick={() => handleRefund(s._id)} // panggil fungsi refund
-                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg aspect-square text-sm font-medium transition-colors"
+                        className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-lg aspect-square text-sm font-medium transition-colors"
                       >
                         <RotateCcw className="w-4 h-4" /> {/* Refund */}
                       </button>
