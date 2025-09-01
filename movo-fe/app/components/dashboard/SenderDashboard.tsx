@@ -19,6 +19,7 @@ interface Stream {
   token: string;
   tokenIcon: string;
   recipient: string;
+  fullname? : string;
   totalAmount: number;
   totalSent: number;
 }
@@ -65,6 +66,7 @@ export default function SenderDashboard({
                 : receiver.originCurrency || "USDC",
             tokenIcon: "💰",
             recipient: receiver.depositWalletAddress || "Unknown",
+            fullname: receiver.fullname || "Unknown",
             totalAmount: receiver.amount || 0,
             totalSent: 0,
           })
@@ -207,6 +209,7 @@ export default function SenderDashboard({
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <div className="text-white font-medium">{s.recipient}</div>
+                  <div className="text-white font-medium">{s.fullname}</div>
                   <div className="text-white/60 text-sm">{s.token}</div>
                 </div>
                 <div>
@@ -239,6 +242,9 @@ export default function SenderDashboard({
                     Recipient
                   </th>
                   <th className="text-left p-4 text-white/80 font-medium">
+                    Recipient Name
+                  </th>
+                  <th className="text-left p-4 text-white/80 font-medium">
                     Token
                   </th>
                   <th className="text-left p-4 text-white/80 font-medium">
@@ -256,6 +262,7 @@ export default function SenderDashboard({
                     className="border-b border-white/5 hover:bg-white/5 transition-colors"
                   >
                     <td className="p-4 text-white">{s.recipient}</td>
+                    <td className="p-4 text-white">{s.fullname}</td>
                     <td className="p-4 text-white">{s.token}</td>
                     <td className="p-4 text-white">{s.totalAmount}</td>
                     <td className="p-4">

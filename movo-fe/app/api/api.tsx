@@ -100,7 +100,6 @@ export const changeBankAccount = async (email : string, bankAccountNumber : stri
 
 
 
-
 export const addReceiverToGroup = async (_id : string, originCurrency : string, tokenIcon : string, groupId: string, depositWalletAddress : string, amount : string ) => {
   try{
       const response = await api.post("/addReceiverToGroup", {_id, originCurrency, tokenIcon, groupId, depositWalletAddress, amount});

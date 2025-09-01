@@ -105,12 +105,13 @@ export default function CreateStreamModal({
         formData.receiverAddress,
         formData.amount
       );
-
+      console.log(addUser)
       // ⬇️ Buat objek ReceiverInGroup lokal dari response / form
       const newStream: ReceiverInGroup = {
         _id: addUser.insertedId || Date.now().toString(), // fallback kalau backend gak return id
         groupId,
         originCurrency: formData.token.address,
+        fullname : addUser.fullname,
         tokenIcon: formData.token.icon,
         depositWalletAddress: formData.receiverAddress,
         amount: parseFloat(formData.amount),

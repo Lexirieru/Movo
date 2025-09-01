@@ -1,6 +1,6 @@
 export interface ReceiverInGroup {
   _id: string;
-  fullName? : string;
+  fullname? : string;
   groupId : string;
   // Token
   originCurrency : string;
