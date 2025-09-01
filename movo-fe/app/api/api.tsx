@@ -101,10 +101,10 @@ export const changeBankAccount = async (email : string, bankAccountNumber : stri
 
 
 
-export const addReceiverToGroup = async (_id : string) => {
+export const addReceiverToGroup = async (_id : string, originCurrency : string, tokenIcon : string, groupId: string, depositWalletAddress : string, amount : string ) => {
   try{
-      const response = await api.post("/addReceiverToGroup", {_id});
-      return response.data.data
+      const response = await api.post("/addReceiverToGroup", {_id, originCurrency, tokenIcon, groupId, depositWalletAddress, amount});
+      return response.data
   }
   catch(err){
       console.log(err);
@@ -143,7 +143,7 @@ export const loadSpecifiedGroupTransactionHistory = async (_id : string, groupId
 
 export const loadSpecifiedGroup = async (_id: string, groupId: string): Promise<GroupOfUser | null> => {
   try {
-    const response = await api.post("/loadSpecifiedGroup", { _id, groupId });
+    const response = await api.post("/loadSpecifiedGroupForSender", { _id, groupId });
     return response.data.data as GroupOfUser;
   } catch (err) {
     console.log("Error loading specified group:", err);

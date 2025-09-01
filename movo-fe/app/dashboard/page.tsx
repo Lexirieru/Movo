@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import SenderDashboard from "../components/dashboard/SenderHistoryDashboard";
+import SenderDashboard from "../components/dashboard/SenderDashboard";
 import ReceiverDashboard from "../components/dashboard/RecieverDashboard";
 
 // OnchainKit Wallet Components

@@ -1,12 +1,14 @@
 export interface ReceiverInGroup {
   _id: string;
+  fullName? : string;
   groupId : string;
   // Token
-  originCurrency : Token;
+  originCurrency : string;
   tokenIcon : string;
   // receiverAddress
   depositWalletAddress : string;
   amount : number;
+
 }
 
 export interface Token {

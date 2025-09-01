@@ -3,12 +3,14 @@ import { useState } from "react";
 import { X, Search } from "lucide-react";
 import { ReceiverInGroup, Token } from "@/types/receiverInGroupTemplate";
 import { useAuth } from "@/lib/userContext";
+import { addReceiverToGroup } from "@/app/api/api";
+import { useParams, useRouter } from "next/navigation";
 
 
 interface CreateStreamModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreateStream: (stream: FormData) => void;
+  onCreateStream: (stream: ReceiverInGroup) => void;
 }
 
 interface FormData {
@@ -54,6 +56,9 @@ export default function CreateStreamModal({
   onClose,
   onCreateStream,
 }: CreateStreamModalProps) {
+  const router = useRouter();
+  const params = useParams();
+  const groupId = params.groupId as string; // 👉 "group_1756722469592_8hvygor92"
   const { user, loading, authenticated } = useAuth(); 
   const [step, setStep] = useState(1); // 1: form, 2: token search
   const [formData, setFormData] = useState<FormData>({
@@ -87,25 +92,42 @@ export default function CreateStreamModal({
     setSearchResults([]);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.token || !formData.receiverAddress || !formData.amount)
       return;
-    
-    const newStream: ReceiverInGroup = {
-      // idnya sender
-      _id: user._id,
-      // ngambil dari FE
-      groupId: Date.now().toString(),
-      originCurrency: formData.token,
-      tokenIcon: formData.token.icon,
-      depositWalletAddress: formData.receiverAddress,
-      amount: parseFloat(formData.amount),
-    };
-    
-    onCreateStream(newStream);
+
+    try {
+      const addUser = await addReceiverToGroup(
+        user._id,
+        formData.token.address,
+        formData.token.icon,
+        groupId,
+        formData.receiverAddress,
+        formData.amount
+      );
+
+      // ⬇️ Buat objek ReceiverInGroup lokal dari response / form
+      const newStream: ReceiverInGroup = {
+        _id: addUser.insertedId || Date.now().toString(), // fallback kalau backend gak return id
+        groupId,
+        originCurrency: formData.token.address,
+        tokenIcon: formData.token.icon,
+        depositWalletAddress: formData.receiverAddress,
+        amount: parseFloat(formData.amount),
+      };
+
+      // 🔑 Kirim ke parent biar SenderDashboard update state tanpa fetch ulang
+      onCreateStream(newStream);
+
+    } catch (e) {
+      console.log(e);
+      return;
+    }
+
     onClose();
     resetForm();
   };
+
 
   const resetForm = () => {
     setFormData({

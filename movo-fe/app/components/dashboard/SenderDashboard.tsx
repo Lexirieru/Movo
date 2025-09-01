@@ -37,6 +37,8 @@ export default function SenderDashboard({
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [streams, setStreams] = useState<Stream[]>([]);
   const [hasFetched, setHasFetched] = useState(false);
+  const [refreshFlag, setRefreshFlag] = useState(0); // 🔑 trigger ulang useEffect
+
   const [filterType, setFilterType] = useState<"all" | "pending" | "completed">(
     "all"
   );
@@ -50,6 +52,7 @@ export default function SenderDashboard({
           user._id,
           groupId
         );
+        console.log(group)
 
         if (!group) return;
 
@@ -59,7 +62,7 @@ export default function SenderDashboard({
             token:
               typeof receiver.originCurrency === "string"
                 ? receiver.originCurrency
-                : receiver.originCurrency?.address || "USDC",
+                : receiver.originCurrency || "USDC",
             tokenIcon: "💰",
             recipient: receiver.depositWalletAddress || "Unknown",
             totalAmount: receiver.amount || 0,
@@ -75,7 +78,7 @@ export default function SenderDashboard({
     };
 
     fetchGroupStreams();
-  }, [loading, user, hasFetched, groupId]);
+  }, [loading, user, hasFetched, groupId, refreshFlag]);
 
   // Filter streams
   const filteredStreams = streams.filter((s) => {
@@ -286,7 +289,20 @@ export default function SenderDashboard({
       <CreateStreamModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onCreateStream={(s) => setStreams([s, ...streams])}
+        onCreateStream={(newReceiver) => {
+          const mapped: Stream = {
+            id: newReceiver._id,
+            token:
+              typeof newReceiver.originCurrency === "string"
+                ? newReceiver.originCurrency
+                : newReceiver.originCurrency,
+            tokenIcon: newReceiver.tokenIcon || "💰",
+            recipient: newReceiver.depositWalletAddress,
+            totalAmount: newReceiver.amount,
+            totalSent: 0,
+          };
+          setStreams((prev) => [mapped, ...prev]);
+        }}
       />
     </div>
   );

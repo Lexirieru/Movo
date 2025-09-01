@@ -1,5 +1,5 @@
 // app/dashboard/sender/[groupId]/page.tsx
-import SenderDashboard from "@/app/components/dashboard/SenderHistoryDashboard";
+import SenderDashboard from "@/app/components/dashboard/SenderDashboard";
 export default async function SenderGroupDetailPage({
   params,
 }: {
