@@ -50,6 +50,11 @@ export default function GroupDashboard({ onGroupSelect }: GroupDashboardProps) {
     (group.nameOfGroup ?? "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleGroupDeleted = () => {
+    // Reset fetch flag supaya useEffect dijalankan lagi
+    setHasFetched(false);
+  };
+
   const handleGroupSelect = (groupId: string) => {
     router.push(`/dashboard/sender/${groupId}`)
   }
@@ -126,7 +131,9 @@ export default function GroupDashboard({ onGroupSelect }: GroupDashboardProps) {
           groups={filteredGroups} 
           onGroupSelect={handleGroupSelect} 
           isLoading={!hasFetched && loading}
+          onGroupDeleted={handleGroupDeleted} // <-- tambahkan ini
         />
+
         
       </div>
 

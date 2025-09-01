@@ -1,6 +1,16 @@
+import { deleteGroup } from "@/app/api/api";
+import { useAuth } from "@/lib/userContext";
 import { GroupOfUser } from "@/types/receiverInGroupTemplate";
 import { ReceiverInGroup } from "@/types/receiverInGroupTemplate";
-import { Users, Send, ArrowRight, Clock } from "lucide-react";
+import { Users, Send, ArrowRight, Clock, Delete } from "lucide-react";
+
+
+interface GroupListProps {
+  groups: GroupOfUser[];
+  onGroupSelect?: (groupId: string) => void;
+  isLoading: boolean;
+  onGroupDeleted?: () => void; // <-- baru
+}
 
 // --- Helper Functions (bisa dipindah ke file utils jika perlu) ---
 const getTotalAmount = (receivers: ReceiverInGroup[] | undefined | null): number => {
@@ -24,8 +34,8 @@ interface GroupListProps {
   isLoading: boolean;
 }
 
-export default function GroupList({ groups, onGroupSelect, isLoading }: GroupListProps) {
-  
+export default function GroupList({ groups, onGroupSelect, isLoading, onGroupDeleted }: GroupListProps) {
+  const { user, loading } = useAuth();
   if (isLoading) {
       return <div className="text-center p-12 text-white/60">Loading groups...</div>;
   }
@@ -47,6 +57,23 @@ export default function GroupList({ groups, onGroupSelect, isLoading }: GroupLis
       onGroupSelect(groupId);
     }
   };
+  const handleDeleteGroup = async (groupId: string) => {
+    // Tampilkan popup konfirmasi
+    const confirmDelete = window.confirm("Are you sure you want to delete this group? This action cannot be undone.");
+    if (!confirmDelete) return; // user batal, langsung keluar
+
+    try {
+      const groupDeleted = await deleteGroup(user._id, groupId);
+      console.log(groupDeleted);
+      // Panggil callback setelah sukses delete
+      if (onGroupDeleted) onGroupDeleted();
+    } catch (err) {
+      console.log(err);
+      return;
+    }
+  };
+
+
 
   return (
     <>
@@ -135,6 +162,12 @@ export default function GroupList({ groups, onGroupSelect, isLoading }: GroupLis
                                 className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
                             >
                                 <Send className="w-4 h-4" />
+                            </button>
+                            <button
+                                onClick={() => handleDeleteGroup(group.groupId)}
+                                className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                            >
+                                <Delete className="w-4 h-4" />
                             </button>
                         </td>
                     </tr>

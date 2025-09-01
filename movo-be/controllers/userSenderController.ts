@@ -252,7 +252,7 @@ export async function removeReceiverDataFromGroup(req: Request, res: Response) {
 }
 // untuk ngehapus satu group spesifik
 export async function deleteGroup(req: Request, res: Response){
-  const {groupId, _id} = req.body;
+  const {_id, groupId} = req.body;
 
   if(!groupId || !_id){
     res.status(400).json({

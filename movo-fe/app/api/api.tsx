@@ -129,6 +129,15 @@ export const loadAllGroupTransactionHistory = async (_id : string) => {
       console.log(err);
   }  
 }
+export const deleteGroup = async (_id : string, groupId : string) => {
+  try{
+      const response = await api.post("/deleteGroup", {_id, groupId});
+      return response.data
+  }
+  catch(err){
+      console.log(err);
+  }  
+}
 
 export const loadSpecifiedGroupTransactionHistory = async (_id : string, groupId : string) => {
   try{
