@@ -1,18 +1,47 @@
-import { ChevronDown, Building2, CreditCard, Mail, ArrowRight, AlertTriangle } from "lucide-react";
+import {
+  X,
+  ChevronDown,
+  Building2,
+  CreditCard,
+  Mail,
+  ArrowRight,
+  AlertTriangle,
+  Plus,
+  Info,
+} from "lucide-react";
 import { DollarSign } from "lucide-react";
 import { bankDictionary } from "@/lib/dictionary";
 import FormInput from "@/app/auth/components/FormInput";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/userContext";
-import { changeBankAccount, getBankAccount, getBankAccountFromDatabase } from "@/app/api/api";
+import {
+  changeBankAccount,
+  getBankAccount,
+  getBankAccountFromDatabase,
+} from "@/app/api/api";
 import { BankAccountInformation } from "@/types/receiverInGroupTemplate";
 
 interface BankFormProps {
-  bankForm: { bankName: string; bankAccountNumber: string; accountHolderName: string };
+  bankForm: {
+    bankName: string;
+    bankAccountNumber: string;
+    accountHolderName: string;
+  };
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSelectBank: () => void;
   onConfirm: () => void;
   isProcessing?: boolean;
+  claimAmount?: number;
+  netAmount?: number;
+  protocolFee?: number;
+}
+
+interface SavedBankAccount {
+  id: string;
+  bankName: string;
+  bankAccountNumber: string;
+  accountHolderName: string;
+  bankCode: string;
 }
 
 export default function BankForm({
@@ -21,15 +50,29 @@ export default function BankForm({
   onSelectBank,
   onConfirm,
   isProcessing,
+  claimAmount = 0,
+  netAmount = 0,
+  protocolFee = 0,
 }: BankFormProps) {
   const { user, loading } = useAuth();
-  const [bankAccountData, setBankAccountData] = useState<BankAccountInformation>();
+  const [bankAccountData, setBankAccountData] =
+    useState<BankAccountInformation>();
   const [originalData, setOriginalData] = useState<BankAccountInformation>();
   const [hasFetched, setHasFetched] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
   const [isConfirming, setIsConfirming] = useState(false);
 
-  const isFormValid = bankForm.bankName && bankForm.bankAccountNumber;
+  // State untuk saved bank accounts dan Add Bank popup
+  const [savedBankAccounts, setSavedBankAccounts] = useState<
+    SavedBankAccount[]
+  >([]);
+  const [showAddBankPopup, setShowAddBankPopup] = useState(false);
+  const [showSavedBankDropdown, setShowSavedBankDropdown] = useState(false);
+  const [selectedSavedBank, setSelectedSavedBank] =
+    useState<SavedBankAccount | null>(null);
+
+  const isFormValid =
+    bankForm.bankName && bankForm.bankAccountNumber && claimAmount > 0;
   const estimatedTime = "1-3 business days";
 
   // cek apakah ada perubahan
@@ -46,6 +89,10 @@ export default function BankForm({
       try {
         setIsFetching(true);
         const data = await getBankAccount(user.email);
+
+        // TODO: Fetch saved bank accounts from API
+        // const savedAccounts = await getSavedBankAccounts(user.email);
+        // setSavedBankAccounts(savedAccounts || []);
 
         if (!data?.data) {
           setIsFetching(false);
@@ -65,9 +112,24 @@ export default function BankForm({
         setOriginalData(initBankAccountInformation);
 
         // isi ke form
-        onChange({ target: { name: "bankName", value: initBankAccountInformation.bankName } } as any);
-        onChange({ target: { name: "bankAccountNumber", value: initBankAccountInformation.bankAccountNumber } } as any);
-        onChange({ target: { name: "accountHolderName", value: initBankAccountInformation.bankAccountName } } as any);
+        onChange({
+          target: {
+            name: "bankName",
+            value: initBankAccountInformation.bankName,
+          },
+        } as any);
+        onChange({
+          target: {
+            name: "bankAccountNumber",
+            value: initBankAccountInformation.bankAccountNumber,
+          },
+        } as any);
+        onChange({
+          target: {
+            name: "accountHolderName",
+            value: initBankAccountInformation.bankAccountName,
+          },
+        } as any);
 
         setHasFetched(true);
       } catch (err) {
@@ -91,101 +153,200 @@ export default function BankForm({
   }
 
   const handleConfirmChanges = async () => {
-  try {
-    setIsConfirming(true);
-    const bankCode = bankDictionary[bankForm.bankName];
+    try {
+      setIsConfirming(true);
+      const bankCode = bankDictionary[bankForm.bankName];
 
-    // update ke backend
-    await changeBankAccount(
-      user?.email,
-      bankForm.bankAccountNumber,
-      bankCode
-    );
+      // update ke backend
+      await changeBankAccount(
+        user?.email,
+        bankForm.bankAccountNumber,
+        bankCode,
+      );
 
-    // setelah sukses, ambil lagi data terbaru dari backend
-    const refreshed = await getBankAccount(user?.email);
-    if (refreshed?.data) {
-      const updated: BankAccountInformation = {
-        bankId: refreshed.data.bankId,
-        bankName: refreshed.data.bankName,
-        bankCode: refreshed.data.bankCode,
-        bankAccountNumber: refreshed.data.bankAccountNumber,
-        bankAccountName: refreshed.data.bankAccountName,
-      };
+      // setelah sukses, ambil lagi data terbaru dari backend
+      const refreshed = await getBankAccount(user?.email);
+      if (refreshed?.data) {
+        const updated: BankAccountInformation = {
+          bankId: refreshed.data.bankId,
+          bankName: refreshed.data.bankName,
+          bankCode: refreshed.data.bankCode,
+          bankAccountNumber: refreshed.data.bankAccountNumber,
+          bankAccountName: refreshed.data.bankAccountName,
+        };
 
-      setOriginalData(updated);
-      setBankAccountData(updated);
+        setOriginalData(updated);
+        setBankAccountData(updated);
 
-      // isi lagi ke form (supaya Account Holder Name ke-update)
-      onChange({ target: { name: "bankName", value: updated.bankName } } as any);
-      onChange({ target: { name: "bankAccountNumber", value: updated.bankAccountNumber } } as any);
-      onChange({ target: { name: "accountHolderName", value: updated.bankAccountName } } as any);
+        // isi lagi ke form (supaya Account Holder Name ke-update)
+        onChange({
+          target: { name: "bankName", value: updated.bankName },
+        } as any);
+        onChange({
+          target: {
+            name: "bankAccountNumber",
+            value: updated.bankAccountNumber,
+          },
+        } as any);
+        onChange({
+          target: { name: "accountHolderName", value: updated.bankAccountName },
+        } as any);
+      }
+    } catch (err) {
+      console.error("Failed to update bank account", err);
+    } finally {
+      setIsConfirming(false);
     }
-  } catch (err) {
-    console.error("Failed to update bank account", err);
-  } finally {
-    setIsConfirming(false);
-  }
-};
+  };
 
+  const handleSelectSavedBank = (savedBank: SavedBankAccount) => {
+    setSelectedSavedBank(savedBank);
+    onChange({
+      target: { name: "bankName", value: savedBank.bankName },
+    } as any);
+    onChange({
+      target: { name: "bankAccountNumber", value: savedBank.bankAccountNumber },
+    } as any);
+    onChange({
+      target: { name: "accountHolderName", value: savedBank.accountHolderName },
+    } as any);
+    setShowSavedBankDropdown(false);
+  };
 
   return (
     <div className="space-y-6">
       {/* Bank Account Form */}
       <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
-        <div className="flex items-center space-x-3 mb-6">
-          <Building2 className="w-6 h-6 text-green-400" />
-          <h4 className="text-white font-medium">Bank Account Details</h4>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <Building2 className="w-6 h-6 text-green-400" />
+            <h4 className="text-white font-medium">Bank Account Details</h4>
+          </div>
+
+          {/* Add Bank Button */}
+          <button
+            onClick={() => setShowAddBankPopup(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Bank</span>
+          </button>
         </div>
 
         <div className="space-y-4">
-          {/* Bank Dropdown */}
-          <div>
-            <label className="text-white/80 text-sm mb-2 block">Bank Name</label>
+          {/* Saved Banks Dropdown */}
+          <div className="relative">
+            <label className="text-white/80 text-sm mb-2 block">
+              Saved Bank Accounts
+            </label>
             <button
-              onClick={onSelectBank}
+              onClick={() => setShowSavedBankDropdown(!showSavedBankDropdown)}
               className="w-full p-4 bg-white/5 border border-white/10 rounded-xl text-left hover:bg-white/10 transition-colors flex items-center justify-between group"
             >
-              {bankForm.bankName ? (
+              {selectedSavedBank ? (
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
                     <Building2 className="w-4 h-4 text-white" />
                   </div>
                   <div>
-                    <div className="text-white font-medium">{bankForm.bankName}</div>
+                    <div className="text-white font-medium">
+                      {selectedSavedBank.bankName}
+                    </div>
                     <div className="text-gray-400 text-sm">
-                      Code: {bankDictionary[bankForm.bankName]}
+                      {selectedSavedBank.bankAccountNumber} •{" "}
+                      {selectedSavedBank.accountHolderName}
                     </div>
                   </div>
                 </div>
               ) : (
-                <span className="text-gray-400">Select your bank</span>
+                <span className="text-gray-400">
+                  Select from saved banks or add new bank
+                </span>
               )}
-              <ChevronDown className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
+              <ChevronDown
+                className={`w-5 h-5 text-gray-400 group-hover:text-white transition-all ${showSavedBankDropdown ? "rotate-180" : ""}`}
+              />
             </button>
+
+            {/* Dropdown Menu */}
+            {showSavedBankDropdown && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-white/10 rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto">
+                {savedBankAccounts.length > 0 ? (
+                  savedBankAccounts.map((bank) => (
+                    <button
+                      key={bank.id}
+                      onClick={() => handleSelectSavedBank(bank)}
+                      className="w-full p-4 hover:bg-white/10 transition-colors flex items-center space-x-3 text-left border-b border-white/5 last:border-b-0"
+                    >
+                      <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                        <Building2 className="w-4 h-4 text-white" />
+                      </div>
+                      <div>
+                        <div className="text-white font-medium">
+                          {bank.bankName}
+                        </div>
+                        <div className="text-gray-400 text-sm">
+                          {bank.bankAccountNumber} • {bank.accountHolderName}
+                        </div>
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <div className="p-4 text-center text-gray-400">
+                    No saved bank accounts. Add one to get started.
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          <FormInput
-            type="text"
-            name="bankAccountNumber"
-            placeholder="Bank Account Number"
-            value={bankForm.bankAccountNumber}
-            onChange={onChange}
-            icon={CreditCard}
-            required
-          />
+          {/* Current Form Fields - Show only if bank is selected */}
+          {(selectedSavedBank || bankForm.bankName) && (
+            <>
+              <div>
+                <label className="text-white/80 text-sm mb-2 block">
+                  Selected Bank
+                </label>
+                <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                      <Building2 className="w-4 h-4 text-white" />
+                    </div>
+                    <div>
+                      <div className="text-white font-medium">
+                        {bankForm.bankName}
+                      </div>
+                      <div className="text-gray-400 text-sm">
+                        Code: {bankDictionary[bankForm.bankName]}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-          <FormInput
-            type="text"
-            name="accountHolderName"
-            placeholder="Account Holder Name"
-            value={bankForm.accountHolderName}
-            onChange={() => {}} // kosongin, supaya nggak bisa diubah
-            icon={Mail}
-            disabled 
-            readOnly
-          />
+              <FormInput
+                type="text"
+                name="bankAccountNumber"
+                placeholder="Bank Account Number"
+                value={bankForm.bankAccountNumber}
+                onChange={onChange}
+                icon={CreditCard}
+                required
+                readOnly={!!selectedSavedBank}
+              />
 
+              <FormInput
+                type="text"
+                name="accountHolderName"
+                placeholder="Account Holder Name"
+                value={bankForm.accountHolderName}
+                onChange={() => {}} // kosongin, supaya nggak bisa diubah
+                icon={Mail}
+                disabled
+                readOnly
+              />
+            </>
+          )}
         </div>
       </div>
 
@@ -207,14 +368,75 @@ export default function BankForm({
         </button>
       )}
 
+      {/* Add Bank Popup */}
+      {showAddBankPopup && (
+        <AddBankPopup onClose={() => setShowAddBankPopup(false)} />
+      )}
+
+      {/* Amount Summary */}
+      <div className="bg-gradient-to-r from-green-500/20 to-emerald-600/20 rounded-2xl p-6 border border-green-500/30">
+        <div className="space-y-4">
+          {/* Header */}
+          <div className="flex items-center space-x-2">
+            <DollarSign className="w-5 h-5 text-green-400" />
+            <h4 className="text-white font-semibold text-lg">
+              Fiat Conversion Summary
+            </h4>
+          </div>
+
+          {/* Summary Details */}
+          <div className="space-y-3 text-sm">
+            {/* Claim Amount */}
+            <div className="flex justify-between">
+              <span className="text-white/70">Claim Amount:</span>
+              <span className="text-white font-medium">
+                {claimAmount.toFixed(4)} USDC
+              </span>
+            </div>
+
+            {/* Protocol Fee */}
+            <div className="flex justify-between items-start">
+              <div className="text-white/70 max-w-xs">
+                <span className="font-medium">Protocol Fee (0.25%):</span>
+                <p className="text-xs text-white/50 mt-0.5">
+                  A 0.25% protocol fee is applied to support platform operations
+                  and development.
+                </p>
+              </div>
+              <span className="text-red-400 font-medium">
+                -{protocolFee.toFixed(4)} USDC
+              </span>
+            </div>
+
+            {/* Net Amount */}
+            <div className="border-t border-white/20 pt-3">
+              <div className="flex justify-between items-end font-medium">
+                <span className="text-white">You'll receive:</span>
+                <div className="text-right">
+                  <div className="text-green-400 text-lg">
+                    {netAmount.toFixed(4)} USDC
+                  </div>
+                  <div className="text-green-300 text-xs mt-0.5">
+                    ≈ Rp {(netAmount * 15850).toLocaleString("id-ID")}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Fiat Conversion Info */}
       <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
         <div className="flex items-start space-x-3">
           <AlertTriangle className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
           <div>
-            <div className="text-yellow-400 font-medium text-sm">Fiat Conversion Notice</div>
+            <div className="text-yellow-400 font-medium text-sm">
+              Fiat Conversion Notice
+            </div>
             <div className="text-white/60 text-sm mt-1">
-              USDC will be converted to IDR at current market rate. Transfer to your bank account may take {estimatedTime}.
+              USDC will be converted to IDR at current market rate. Transfer to
+              your bank account may take {estimatedTime}.
             </div>
           </div>
         </div>
@@ -249,6 +471,190 @@ export default function BankForm({
           )}
         </button>
       </div>
+    </div>
+  );
+}
+
+// Add Bank Popup Component
+function AddBankPopup({ onClose }: { onClose: () => void }) {
+  const [newBankForm, setNewBankForm] = useState({
+    bankName: "",
+    bankAccountNumber: "",
+    accountHolderName: "",
+  });
+  const [showBankSelector, setShowBankSelector] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setNewBankForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleBankSelect = (bankName: string) => {
+    setNewBankForm((prev) => ({
+      ...prev,
+      bankName,
+    }));
+    setShowBankSelector(false);
+  };
+
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+      const bankCode = bankDictionary[newBankForm.bankName];
+
+      // TODO: Implement API call to save new bank account
+      // await saveBankAccount({
+      //   bankName: newBankForm.bankName,
+      //   bankCode,
+      //   bankAccountNumber: newBankForm.bankAccountNumber,
+      //   accountHolderName: newBankForm.accountHolderName
+      // });
+
+      console.log("Saving bank account:", {
+        ...newBankForm,
+        bankCode,
+      });
+
+      // Close popup after successful save
+      onClose();
+    } catch (err) {
+      console.error("Failed to save bank account", err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const isValid =
+    newBankForm.bankName &&
+    newBankForm.bankAccountNumber &&
+    newBankForm.accountHolderName;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-gradient-to-br from-gray-900 to-black border border-white/10 rounded-2xl p-6 w-full max-w-md">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-white text-xl font-semibold">
+            Add New Bank Account
+          </h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-white transition-colors"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {/* Bank Selection */}
+          <div>
+            <label className="text-white/80 text-sm mb-2 block">
+              Bank Name
+            </label>
+            <button
+              onClick={() => setShowBankSelector(true)}
+              className="w-full p-4 bg-white/5 border border-white/10 rounded-xl text-left hover:bg-white/10 transition-colors flex items-center justify-between group"
+            >
+              {newBankForm.bankName ? (
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                    <Building2 className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <div className="text-white font-medium">
+                      {newBankForm.bankName}
+                    </div>
+                    <div className="text-gray-400 text-sm">
+                      Code: {bankDictionary[newBankForm.bankName]}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <span className="text-gray-400">Select your bank</span>
+              )}
+              <ChevronDown className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
+            </button>
+          </div>
+
+          {/* Account Number */}
+          <FormInput
+            type="text"
+            name="bankAccountNumber"
+            placeholder="Bank Account Number"
+            value={newBankForm.bankAccountNumber}
+            onChange={handleInputChange}
+            icon={CreditCard}
+            required
+          />
+
+          {/* Account Holder Name */}
+          <FormInput
+            type="text"
+            name="accountHolderName"
+            placeholder="Account Holder Name"
+            value={newBankForm.accountHolderName}
+            onChange={handleInputChange}
+            icon={Mail}
+            required
+          />
+
+          {/* Save Button */}
+          <button
+            onClick={handleSave}
+            disabled={!isValid || isSaving}
+            className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3 rounded-xl transition-all font-medium flex items-center justify-center space-x-2"
+          >
+            {isSaving ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                <span>Saving...</span>
+              </>
+            ) : (
+              <span>Save Bank Account</span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Bank Selector in Popup */}
+      {showBankSelector && (
+        <div className="fixed inset-0 bg-black/70 z-60 flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-gray-900 to-black border border-white/10 rounded-2xl p-6 w-full max-w-md max-h-96 overflow-hidden flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-white text-lg font-semibold">Select Bank</h3>
+              <button
+                onClick={() => setShowBankSelector(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-2">
+              {Object.keys(bankDictionary).map((bankName) => (
+                <button
+                  key={bankName}
+                  onClick={() => handleBankSelect(bankName)}
+                  className="w-full p-3 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors flex items-center space-x-3 text-left"
+                >
+                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                    <Building2 className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <div className="text-white font-medium">{bankName}</div>
+                    <div className="text-gray-400 text-sm">
+                      Code: {bankDictionary[bankName]}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
