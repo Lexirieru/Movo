@@ -20,6 +20,7 @@ import {
   Name,
 } from "@coinbase/onchainkit/identity";
 import { useAuth } from "@/lib/userContext";
+import GroupDashboard from "../components/dashboard/GroupDashboard";
 
 export default function DashboardPage() {
   const { user, loading, authenticated } = useAuth(); 
@@ -91,7 +92,7 @@ export default function DashboardPage() {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6 relative z-10">
-        {role === "sender" && <SenderDashboard />}
+        {role === "sender" && <GroupDashboard />}
         {role === "receiver" && <ReceiverDashboard />}
         {role === "unknown" && (
           <p className="text-gray-400 text-center mt-20">

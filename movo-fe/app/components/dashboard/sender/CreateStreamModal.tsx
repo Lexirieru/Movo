@@ -99,7 +99,7 @@ export default function CreateStreamModal({
       originCurrency: formData.token,
       tokenIcon: formData.token.icon,
       depositWalletAddress: formData.receiverAddress,
-      amount: parseFloat(formData.amount).toString(),
+      amount: parseFloat(formData.amount),
     };
     
     onCreateStream(newStream);

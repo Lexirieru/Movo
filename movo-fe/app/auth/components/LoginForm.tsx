@@ -23,6 +23,7 @@ export default function LoginForm() {
     setIsLoading(true);
     // Simulate API call
     const response = await login(formData.email, formData.password)
+    console.log(response)
     await new Promise(resolve => setTimeout(resolve, 2000));
     setIsLoading(false);
     console.log(response.statusCode);

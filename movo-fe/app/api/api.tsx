@@ -1,3 +1,4 @@
+import { GroupOfUser } from "@/types/receiverInGroupTemplate";
 import axios, { AxiosError } from "axios";
 
 interface ErrorResponse {
@@ -129,6 +130,38 @@ export const loadAllGroupTransactionHistory = async (_id : string) => {
       console.log(err);
   }  
 }
+
+export const loadSpecifiedGroup = async (_id: string, groupId: string): Promise<GroupOfUser | null> => {
+  try {
+    const response = await api.post("/loadSpecifiedGroup", { _id, groupId });
+    return response.data.data as GroupOfUser;
+  } catch (err) {
+    console.log("Error loading specified group:", err);
+    return null;
+  }
+};
+
+export const addGroup = async (
+  _id: string,
+  email: string,
+  groupId: string,
+  nameOfGroup: string
+) => {
+  try {
+    const response = await api.post("/groups/add", {
+      _id,
+      email,
+      groupId,
+      nameOfGroup,
+    });
+    return response.data; // backend return { message, payroll }
+  } catch (err) {
+    console.log("Error adding group:", err);
+    throw err;
+  }
+};
+
+
 
 export const getUsdcIdrxRate = async () => {
   try{

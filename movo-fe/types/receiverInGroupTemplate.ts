@@ -6,7 +6,7 @@ export interface ReceiverInGroup {
   tokenIcon : string;
   // receiverAddress
   depositWalletAddress : string;
-  amount : string;
+  amount : number;
 }
 
 export interface Token {
