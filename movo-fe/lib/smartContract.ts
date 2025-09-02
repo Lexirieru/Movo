@@ -205,6 +205,7 @@ export const approveTokens = async (
         account: walletClient.account.address,
       },
     );
+    console.log("sini");
 
     const hash = await walletClient.writeContract(request);
     await publicClient.waitForTransactionReceipt({ hash });

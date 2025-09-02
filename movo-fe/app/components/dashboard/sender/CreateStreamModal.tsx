@@ -174,10 +174,11 @@ export default function CreateStreamModal({
           formData.token == "USDC" ? 6 : 2,
         );
 
+        const escrowIdBytes = `0x${existingEscrow.escrowId}` as `0x${string}`;
         const addReceiverResult = await addReceiver(
           walletClient,
           formData.token,
-          existingEscrow.escrowId,
+          escrowIdBytes,
           receiver.address as `0x${string}`,
           parsedAmount,
         );
@@ -249,9 +250,12 @@ export default function CreateStreamModal({
             escrowResult.error || "Failed to create escrow onchain",
           );
         }
+        const escrowIdBytes = `0x${escrowResult.escrowId}` as `0x${string}`;
+        console.log(escrowResult);
+
         const escrowData = {
           groupId: groupId,
-          escrowId: escrowResult.escrowId ?? "",
+          escrowId: escrowIdBytes,
           originCurrency: formData.token,
           walletAddress: walletClient.account.address,
           totalAmount: totalAmount.toString(),
