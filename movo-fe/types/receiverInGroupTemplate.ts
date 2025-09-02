@@ -1,14 +1,13 @@
 export interface ReceiverInGroup {
   _id: string;
-  fullname? : string;
-  groupId : string;
+  fullname?: string;
+  groupId: string;
   // Token
-  originCurrency : string;
-  tokenIcon : string;
+  originCurrency: string;
+  tokenIcon: string;
   // receiverAddress
-  depositWalletAddress : string;
-  amount : number;
-
+  depositWalletAddress: string;
+  amount: number;
 }
 
 export interface Token {
@@ -32,8 +31,8 @@ export interface GroupOfUser {
 
 export interface BankAccountInformation {
   bankId?: string;
-  bankName : string;
-  bankCode : string;
-  bankAccountNumber : string;
-  bankAccountName : string;
+  bankName: string;
+  bankCode: string;
+  bankAccountNumber: string;
+  bankAccountName: string;
 }

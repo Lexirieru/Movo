@@ -40,6 +40,11 @@ const UserDataSchema = new Schema(
       required: true,
       unique: true,
     },
+    walletAddress: {
+      type: String,
+      require: false,
+      unique: true,
+    },
     depositWalletAddress: {
       type: String,
       required: false,
@@ -84,8 +89,6 @@ const UserDataSchema = new Schema(
   }
 );
 
-
-
 export const UserModel = mongoose.model("UserData", UserDataSchema);
 
 const GroupOfUserSchema = new Schema(
@@ -109,43 +112,51 @@ const GroupOfUserSchema = new Schema(
     Receivers: [
       {
         // dari be
-        id: {
-          type: String,
-          required : true,
+        _id: {
+          type: mongoose.Schema.Types.ObjectId,
+          required: true,
         },
-        email : {
+        email: {
           type: String,
-          required : true,
+          required: true,
         },
         fullname: {
           type: String,
           required: true,
         },
-        apiKey : {
+        apiKey: {
           type: String,
           required: true,
         },
-        secretKey : {
+        secretKey: {
           type: String,
           required: true,
         },
 
         // dari fe
-        originCurrency : {
-          type : String,
-          required : true
-        },
-        tokenIcon : {
-          type : String,
-          required : true
-        },
-        depositWalletAddress : {
+        originCurrency: {
           type: String,
           required: true,
         },
-        amount : {
+        tokenIcon: {
+          type: String,
+          required: true,
+        },
+        walletAddress: {
+          type: String,
+          required: true,
+        },
+        depositWalletAddress: {
+          type: String,
+          required: true,
+        },
+        amount: {
           type: Number,
-          required : false,
+          required: false,
+        },
+        role: {
+          type: String,
+          required: false,
         },
       },
     ],
@@ -165,9 +176,9 @@ export const GroupOfUserModel = mongoose.model(
 );
 
 const LoginSessionTokenSchema = new Schema({
-  userId : {
-    type : String,
-    required : true
+  userId: {
+    type: String,
+    required: true,
   },
   email: {
     type: String,

@@ -104,11 +104,12 @@ export default function CreateStreamModal({
         formData.receiverAddress,
         formData.amount,
       );
+
       const newStream: ReceiverInGroup = {
-        _id: Date.now().toString(), // fallback kalau backend gak return id
+        _id: addUser.data._id,
         groupId,
         originCurrency: formData.token.name,
-        fullname: addUser.data,
+        fullname: addUser.data.fullname,
         tokenIcon: formData.token.icon,
         depositWalletAddress: formData.receiverAddress,
         amount: parseFloat(formData.amount),

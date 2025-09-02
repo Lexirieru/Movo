@@ -59,17 +59,17 @@ export async function addGroup(req: Request, res: Response) {
 // untuk ngeadd receiver ke suatu grup lewat depositWalletAddress + sekalian nambahin amount
 export async function addReceiverToGroup(req: Request, res: Response) {
   const {
-    _id,
+    senderId,
     originCurrency,
     tokenIcon,
     groupId,
-    depositWalletAddress,
+    walletAddress,
     amount,
   } = req.body;
 
-  if (!depositWalletAddress || !amount) {
+  if (!walletAddress || !amount) {
     res.status(400).json({
-      message: "DepositWalletAddress and amount are required",
+      message: "Wallet Address and amount are required",
     });
     return;
   }
@@ -80,7 +80,7 @@ export async function addReceiverToGroup(req: Request, res: Response) {
     return;
   }
 
-  if (groupData.senderId.toString() !== _id) {
+  if (groupData.senderId.toString() !== senderId) {
     res
       .status(403)
       .json({ message: "You are not authorized to modify this group" });
@@ -88,44 +88,58 @@ export async function addReceiverToGroup(req: Request, res: Response) {
   }
 
   try {
-    const userData = await UserModel.findOne({ depositWalletAddress });
+    const userData = await UserModel.findOne({ walletAddress });
     if (!userData) {
       res.status(404).json({
-        message: "User not found with the provided deposit wallet address",
+        message: "User not found with the provided wallet address",
       });
       return;
     }
 
-    // push receiver baru beserta amount
-    const updatedGroup = await GroupOfUserModel.findOneAndUpdate(
+    const addReceiverToGroup = await GroupOfUserModel.findOneAndUpdate(
       { groupId },
-      {
-        $push: {
-          Receivers: {
-            id: userData._id,
-            email: userData.email,
-            fullname: userData.fullname,
-            apiKey: userData.apiKey,
-            secretKey: userData.secretKey,
-            depositWalletAddress: userData.depositWalletAddress,
-            originCurrency,
-            tokenIcon,
-            amount,
+      [
+        {
+          $set: {
+            Receivers: {
+              $concatArrays: [
+                "$Receivers",
+                [
+                  {
+                    _id: userData._id,
+                    email: userData.email,
+                    fullname: userData.fullname,
+                    apiKey: userData.apiKey,
+                    secretKey: userData.secretKey,
+                    depositWalletAddress: userData.depositWalletAddress,
+                    walletAddress: userData.walletAddress,
+                    originCurrency,
+                    tokenIcon,
+                    amount,
+                  },
+                ],
+              ],
+            },
           },
         },
-        $inc: { totalRecipients: 1 },
-      },
-      { new: true } // supaya return document terbaru
+        {
+          $set: {
+            totalRecipients: { $size: "$Receivers" },
+          },
+        },
+      ],
+      { new: true }
     );
+    console.log();
 
-    if (!updatedGroup) {
+    if (!addReceiverToGroup) {
       res.status(404).json({ message: "Group not found" });
       return;
     }
 
     res.status(201).json({
       message: "Receiver successfully added to group with amount",
-      data: userData.fullname,
+      data: userData,
     });
   } catch (err: any) {
     res.status(500).json({
@@ -280,18 +294,14 @@ export async function removeReceiverDataFromGroup(req: Request, res: Response) {
   }
 
   try {
-    // pastikan receiverId adalah string dari _id yang ingin dihapus
     const groupData = await GroupOfUserModel.findOneAndUpdate(
       { groupId, senderId },
       {
-        $pull: { Receivers: { _id: new mongoose.Types.ObjectId(receiverId) } }, // perhatikan 'Receivers' dan ObjectId
+        $pull: { Receivers: { _id: new mongoose.Types.ObjectId(receiverId) } },
       },
-      { new: true } // kembalikan data setelah update
+      { new: true }
     );
 
-    console.log("Updated group:", groupData);
-
-    console.log(groupData);
     if (!groupData) {
       res.status(404).json({
         message: "Group or receiver not found",
@@ -301,7 +311,7 @@ export async function removeReceiverDataFromGroup(req: Request, res: Response) {
 
     res.status(200).json({
       message: "Receiver successfully removed from group",
-      group: groupData,
+      data: groupData, // kembalikan data biar frontend bisa refresh
     });
     return;
   } catch (err: any) {

@@ -19,7 +19,7 @@ export default function GroupDashboard({ onGroupSelect }: GroupDashboardProps) {
   const { user, loading } = useAuth();
   const [groups, setGroups] = useState<GroupOfUser[]>([]);
   const [hasFetched, setHasFetched] = useState(false);
-  const router = useRouter()
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -28,8 +28,7 @@ export default function GroupDashboard({ onGroupSelect }: GroupDashboardProps) {
     if (loading || !user?._id || hasFetched) return;
     const fetchGroups = async () => {
       try {
-        const groupData= await loadAllGroup(user._id);
-        console.log(groupData)
+        const groupData = await loadAllGroup(user._id);
         if (Array.isArray(groupData)) {
           const formattedGroups: GroupOfUser[] = groupData.map((g: any) => ({
             ...g,
@@ -47,7 +46,7 @@ export default function GroupDashboard({ onGroupSelect }: GroupDashboardProps) {
 
   // --- LOGIKA FILTER & KALKULASI ---
   const filteredGroups = groups.filter((group) =>
-    (group.nameOfGroup ?? "").toLowerCase().includes(searchTerm.toLowerCase())
+    (group.nameOfGroup ?? "").toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const handleGroupDeleted = () => {
@@ -56,16 +55,15 @@ export default function GroupDashboard({ onGroupSelect }: GroupDashboardProps) {
   };
 
   const handleGroupSelect = (groupId: string) => {
-    router.push(`/dashboard/sender/${groupId}`)
-  }
+    router.push(`/dashboard/sender/${groupId}`);
+  };
 
   const handleCreateGroup = async (groupData: { groupName: string }) => {
     try {
-      if(!user._id && !user.email){
-        console.log("Please login first!")
-      }
-      else{
-          // Generate unique group ID
+      if (!user._id && !user.email) {
+        console.log("Please login first!");
+      } else {
+        // Generate unique group ID
         const groupId = `group_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         // Create new group object
         const newGroup: GroupOfUser = {
@@ -78,17 +76,21 @@ export default function GroupDashboard({ onGroupSelect }: GroupDashboardProps) {
           createdAt: new Date().toString(),
         };
         // Add to local state immediately for better UX
-        setGroups(prev => [newGroup, ...prev]);
-        const response = await addGroup(user._id, user.email, groupId, groupData.groupName)
-        console.log(response)
-        if(response && response.data){
-          setIsCreateModalOpen(false)
+        setGroups((prev) => [newGroup, ...prev]);
+        const response = await addGroup(
+          user._id,
+          user.email,
+          groupId,
+          groupData.groupName,
+        );
+        if (response && response.data) {
+          setIsCreateModalOpen(false);
           router.push(`/dashboard/sender/${groupId}`);
         }
-      }      
+      }
     } catch (err) {
       console.error("Failed to create group", err);
-    //   setGroups(prev => prev.filter(g => g.groupId != groupId))
+      //   setGroups(prev => prev.filter(g => g.groupId != groupId))
     }
   };
 
@@ -103,7 +105,7 @@ export default function GroupDashboard({ onGroupSelect }: GroupDashboardProps) {
               Manage your payment groups and track distributions.
             </p>
           </div>
-          
+
           <button
             onClick={() => setIsCreateModalOpen(true)}
             className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg hover:shadow-cyan-500/25 transition-all duration-300 flex items-center space-x-2 hover:scale-105 group w-fit"
@@ -127,14 +129,12 @@ export default function GroupDashboard({ onGroupSelect }: GroupDashboardProps) {
         />
 
         {/* 3. Daftar Grup (Responsif) */}
-        <GroupList 
-          groups={filteredGroups} 
-          onGroupSelect={handleGroupSelect} 
+        <GroupList
+          groups={filteredGroups}
+          onGroupSelect={handleGroupSelect}
           isLoading={!hasFetched && loading}
           onGroupDeleted={handleGroupDeleted} // <-- tambahkan ini
         />
-
-        
       </div>
 
       {/* Create Group Modal */}

@@ -113,11 +113,10 @@ export default function SenderDashboard({
     try {
       console.log(user);
       const groupDeleted = await removeReceiverDataFromGroup(
-        user._id,
-        groupId,
         receiverId,
+        groupId,
+        user._id,
       );
-      console.log(groupDeleted);
       setStreams((prev) => prev.filter((s) => s._id !== receiverId));
     } catch (err) {
       console.log(err);

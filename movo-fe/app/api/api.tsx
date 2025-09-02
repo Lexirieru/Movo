@@ -115,20 +115,20 @@ export const changeBankAccount = async (
 };
 
 export const addReceiverToGroup = async (
-  _id: string,
+  senderId: string,
   originCurrency: string,
   tokenIcon: string,
   groupId: string,
-  depositWalletAddress: string,
+  walletAddress: string,
   amount: string,
 ) => {
   try {
     const response = await api.post("/addReceiverToGroup", {
-      _id,
+      senderId,
       originCurrency,
       tokenIcon,
       groupId,
-      depositWalletAddress,
+      walletAddress,
       amount,
     });
     return response.data;
@@ -182,17 +182,16 @@ export const editReceiverAmountInGroup = async (
   }
 };
 export const removeReceiverDataFromGroup = async (
-  senderId: string,
-  groupId: string,
   receiverId: string,
+  groupId: string,
+  senderId: string,
 ) => {
   try {
     const response = await api.post("/removeReceiverDataFromGroup", {
-      senderId,
-      groupId,
       receiverId,
+      groupId,
+      senderId,
     });
-    console.log(response);
     return response.data;
   } catch (err) {
     console.log(err);

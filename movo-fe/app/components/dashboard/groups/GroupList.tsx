@@ -8,10 +8,9 @@ interface GroupListProps {
   groups: GroupOfUser[];
   onGroupSelect?: (groupId: string) => void;
   isLoading: boolean;
-  onGroupDeleted?: () => void;
+  onGroupDeleted?: () => void; // <-- baru
 }
 
-// --- Helper Functions (bisa dipindah ke file utils jika perlu) ---
 const getTotalAmount = (
   receivers: ReceiverInGroup[] | undefined | null,
 ): number => {
@@ -30,7 +29,6 @@ const formatDate = (date?: Date | string | null): string => {
   }).format(parsedDate);
 };
 
-// --- Komponen Utama ---
 export default function GroupList({
   groups,
   onGroupSelect,

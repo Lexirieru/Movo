@@ -10,12 +10,15 @@ const movoApiKey = process.env.IDRX_API_KEY!;
 const movoSecretKey = process.env.IDRX_SECRET_KEY!;
 
 // nampilin semua info group yang dia join (Nama grup, nama sendernya, total saldo dia di grup itu)
-export async function loadAllJoinedGroupInformation(req: Request, res: Response) {
-  const {_id} = req.body;
+export async function loadAllJoinedGroupInformation(
+  req: Request,
+  res: Response
+) {
+  const { _id } = req.body;
 
   try {
     const loadAllJoinedGroup = await GroupOfUserModel.find({
-      "Receivers.id": _id,
+      "Receivers._id": _id,
     })
       .sort({ timestamp: -1 }) // descending (terbaru di atas)
       .lean(); // supaya hasilnya plain JS object dan lebih cepat
@@ -34,14 +37,17 @@ export async function loadAllJoinedGroupInformation(req: Request, res: Response)
   }
 }
 // untuk nampilin semua informasi tentang group (nama group, siapa yang jadi sendernya, total saldo dari masing masing group yang belun diwithdraw))
-export async function loadSpecificGroupInformation(req: Request, res: Response) {
-  const {_id, groupId} = req.body;
+export async function loadSpecificGroupInformation(
+  req: Request,
+  res: Response
+) {
+  const { _id, groupId } = req.body;
 
   try {
     const loadSpecificGroup = await GroupOfUserModel.find({
-      "Receivers.id": _id,
-      groupId
-    })
+      "Receivers._id": _id,
+      groupId,
+    });
 
     res.status(201).json({
       message: "Specified group's detail successfully sended",
@@ -57,14 +63,17 @@ export async function loadSpecificGroupInformation(req: Request, res: Response) 
   }
 }
 // untuk leave group (db ngeremove receiver ini dari group)
-export async function leaveGroup(req : Request, res: Response){
-  const {_id, groupId} = req.body;
+export async function leaveGroup(req: Request, res: Response) {
+  const { _id, groupId } = req.body;
 
-  try{
-    const specifiedGroup = await GroupOfUserModel.findOne({groupId, "Receivers.id" : _id});
-    if(!specifiedGroup){
+  try {
+    const specifiedGroup = await GroupOfUserModel.findOne({
+      groupId,
+      "Receivers._id": _id,
+    });
+    if (!specifiedGroup) {
       res.status(404).json({
-        message : "Specified group not found"
+        message: "Specified group not found",
       });
       return;
     }
@@ -83,139 +92,154 @@ export async function leaveGroup(req : Request, res: Response){
       removedReceiverId: _id,
     });
     return;
-  }
-  catch(err){
+  } catch (err) {
     console.log(err);
     res.status(500).json({
       message: "Error removing specified receiver from group",
-      error : err
-    })
+      error: err,
+    });
     return;
   }
 }
 // untuk ngefetch total saldo yang belum diwithdraw.
-export async function loadDashboardData(req:Request, res:Response){
-  const {_id} = req.body;
-  try{
+export async function loadDashboardData(req: Request, res: Response) {
+  const { _id } = req.body;
+  try {
     const user = await UserModel.findById(_id);
-    if(!user){
-      res.status(404).json({message : "User not found"});
+    if (!user) {
+      res.status(404).json({ message: "User not found" });
       return;
     }
     res.status(200).json({
-      availableBalance : user.availableBalance, 
-    })
-    return
-  }
-  catch(err){
-    res.status(500).json({message : "Could not load dashboard data", error :  err});
+      availableBalance: user.availableBalance,
+    });
+    return;
+  } catch (err) {
+    res
+      .status(500)
+      .json({ message: "Could not load dashboard data", error: err });
     return;
   }
 }
 
 // kalok wallet to fiat (originCurrencynya crypto idrx), backend yang jalanin kek biasanya
-export async function withdrawFromIDRXtoIDR(req:Request, res: Response){
-  const {_id, withdrawId, receiverId, choice, originCurrency, targetCurrency, bankId,  bankName, bankAccountNumber, bankAccountName, networkChainId, walletAddress, amount } = req.body;
-  
-  if(!choice || !originCurrency){
-    res.status(404).json({message : "Choice and originCurrency are required!"})
+export async function withdrawFromIDRXtoIDR(req: Request, res: Response) {
+  const {
+    _id,
+    withdrawId,
+    receiverId,
+    choice,
+    originCurrency,
+    targetCurrency,
+    bankId,
+    bankName,
+    bankAccountNumber,
+    bankAccountName,
+    networkChainId,
+    walletAddress,
+    amount,
+  } = req.body;
+
+  if (!choice || !originCurrency) {
+    res
+      .status(404)
+      .json({ message: "Choice and originCurrency are required!" });
     return;
   }
-  
-  if(choice == "fiat"  && originCurrency == "IDRX"){
+
+  if (choice == "fiat" && originCurrency == "IDRX") {
     // listen to payrollApproved, burn idrx, generate signature (redeem), post redeem,
-      try {
-        // BURN idrx disini
-        const txHash = await burnIdrx(amount, bankName, bankAccountNumber);
-        if (!txHash) {
-          return res.status(500).json({ message: "Failed to burn IDRX" });
-        }
-        console.log(txHash);
-        
-        // generate signature untuk redeem disini
-        const bankCode = bankDictionary[bankName];
-        if (!bankDictionary[bankName]) {
-          return res.status(400).json({ message: "Invalid bankName" });
-        }
+    try {
+      // BURN idrx disini
+      const txHash = await burnIdrx(amount, bankName, bankAccountNumber);
+      if (!txHash) {
+        return res.status(500).json({ message: "Failed to burn IDRX" });
+      }
+      console.log(txHash);
 
-        const { r_signature, r_METHOD, r_URL_ENDPOINT, r_timestamp, r_body } =
-          generateSignatureForRedeem(
-            txHash,
-            networkChainId,
-            amount,
-            bankAccountNumber,
-            bankCode,
-            bankName,
-            bankAccountName,
-            walletAddress
-          );
+      // generate signature untuk redeem disini
+      const bankCode = bankDictionary[bankName];
+      if (!bankDictionary[bankName]) {
+        return res.status(400).json({ message: "Invalid bankName" });
+      }
 
-        console.log(
-          "Request payload ke IDRX:",
-          JSON.stringify({
-            chainId: r_body.networkChainId.toString(),
-            txHash: r_body.txHash,
-            signature: r_signature,
-            timestamp: r_timestamp,
-          })
-        );
-        const userData = await UserModel.findById(_id);
-
-        const response = await axios.post(
-          "https://idrx.co/api/transaction/redeem-request",
-          r_body,
-          {
-            headers: {
-              "Content-Type": "application/json",
-              "idrx-api-key": userData?.apiKey,
-              "idrx-api-sig": r_signature,
-              "idrx-api-ts": r_timestamp,
-            },
-          }
-        );
-        console.log(response)
-        const withdrawHistory = new WithdrawHistoryModel({
-          withdrawId,
-          receiverId,
+      const { r_signature, r_METHOD, r_URL_ENDPOINT, r_timestamp, r_body } =
+        generateSignatureForRedeem(
+          txHash,
+          networkChainId,
           amount,
-          choice,
-          originCurrency,
-          targetCurrency,
-          bankId,
-          depositWalletAddress :  userData?.depositWalletAddress,
-          walletAddress,
+          bankAccountNumber,
+          bankCode,
           bankName,
           bankAccountName,
-          bankAccountNumber
+          walletAddress
+        );
+
+      console.log(
+        "Request payload ke IDRX:",
+        JSON.stringify({
+          chainId: r_body.networkChainId.toString(),
+          txHash: r_body.txHash,
+          signature: r_signature,
+          timestamp: r_timestamp,
         })
-        // save history ini ke db
-        await withdrawHistory.save()
-        res.status(201).json({
-          data: withdrawHistory,
-          txHash,
-          message: "Successfully withdrawn into fiat"
-        });
-        return;
-      }
-      catch(err){
-        console.log(err);
-        res.status(400).json({error:err});
-        return;
-      }
-  }
-  else{
-    res.status(400).json({message : "originCurrency must be IDRX and transfer must end on fiat"})
+      );
+      const userData = await UserModel.findById(_id);
+
+      const response = await axios.post(
+        "https://idrx.co/api/transaction/redeem-request",
+        r_body,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "idrx-api-key": userData?.apiKey,
+            "idrx-api-sig": r_signature,
+            "idrx-api-ts": r_timestamp,
+          },
+        }
+      );
+      console.log(response);
+      const withdrawHistory = new WithdrawHistoryModel({
+        withdrawId,
+        receiverId,
+        amount,
+        choice,
+        originCurrency,
+        targetCurrency,
+        bankId,
+        depositWalletAddress: userData?.depositWalletAddress,
+        walletAddress,
+        bankName,
+        bankAccountName,
+        bankAccountNumber,
+      });
+      // save history ini ke db
+      await withdrawHistory.save();
+      res.status(201).json({
+        data: withdrawHistory,
+        txHash,
+        message: "Successfully withdrawn into fiat",
+      });
+      return;
+    } catch (err) {
+      console.log(err);
+      res.status(400).json({ error: err });
+      return;
+    }
+  } else {
+    res.status(400).json({
+      message: "originCurrency must be IDRX and transfer must end on fiat",
+    });
     return;
   }
 }
 
-
-// untuk nampilin all withdraw history 
+// untuk nampilin all withdraw history
 export async function loadAllWithdrawHistory(req: Request, res: Response) {
-  const {_id} = req.body;
+  const { _id } = req.body;
 
   try {
-    const histories = await WithdrawHistoryModel.find({ receiverId : _id })
+    const histories = await WithdrawHistoryModel.find({ receiverId: _id })
       .sort({ timestamp: -1 })
       .lean();
 
@@ -232,10 +256,13 @@ export async function loadAllWithdrawHistory(req: Request, res: Response) {
 }
 // untuk nampilin spesifik withdraw history
 export async function loadSpecificWithdrawHistory(req: Request, res: Response) {
-  const {_id, withdrawId} = req.body;
+  const { _id, withdrawId } = req.body;
 
   try {
-    const withdrawHistory = await WithdrawHistoryModel.findOne({ receiverId : _id, withdrawId })
+    const withdrawHistory = await WithdrawHistoryModel.findOne({
+      receiverId: _id,
+      withdrawId,
+    });
 
     res.status(200).json({
       message: "Specified withdraw history successfully loaded",
