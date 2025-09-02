@@ -5,6 +5,7 @@ import Image from "next/image";
 import SenderDashboard from "../components/dashboard/SenderDashboard";
 import ReceiverDashboard from "../components/dashboard/RecieverDashboard";
 import DashboardWrapper from "../components/dashboard/DashboardWrapper";
+import WalletWarning from "../components/dashboard/WalletWarning";
 
 // OnchainKit Wallet Components
 import {
@@ -31,7 +32,7 @@ export default function DashboardPage() {
   const { user, loading, authenticated } = useAuth();
   const { isConnected, address: walletAddress } = useWallet();
   const [address, setAddress] = useState("0x123..."); // default sender
-  
+
   // console.log(user,authenticated)
   // Dummy role mapping
   const senderAddresses = ["0x123...", "0xabc..."];
@@ -42,6 +43,8 @@ export default function DashboardPage() {
     if (senderAddresses.includes(address)) role = "sender";
     else if (receiverAddresses.includes(address)) role = "receiver";
   }
+
+  console.log(user.walletAddress, role);
 
   return (
     <section className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black">
@@ -105,9 +108,15 @@ export default function DashboardPage() {
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6 relative z-0">
         <DashboardWrapper>
-          {role === "sender" && <GroupDashboard />}
-          {role === "receiver" && <ReceiverDashboard />}
-          {role === "unknown" && (
+          {loading ? (
+            <p className="text-gray-400 text-center mt-20">Loading...</p>
+          ) : !user.walletAddress ? (
+            <WalletWarning />
+          ) : role === "sender" ? (
+            <GroupDashboard />
+          ) : role === "receiver" ? (
+            <ReceiverDashboard />
+          ) : (
             <p className="text-gray-400 text-center mt-20">
               Wallet not recognized. Please contact admin 🔒
             </p>
