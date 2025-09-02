@@ -30,8 +30,13 @@ import { color } from "@coinbase/onchainkit/theme";
 
 export default function DashboardPage() {
   const { user, loading, authenticated } = useAuth();
-  const { isConnected, address: walletAddress } = useWallet();
-  const [address, setAddress] = useState("0x123..."); // default sender
+  const { isConnected, address } = useWallet();
+
+  const [mockAddress, setMockAddress] = useState<string | null>(null);
+
+  const walletAddress = mockAddress || user?.walletAddress || address || null;
+
+  // const walletAddress = user?.walletAddress || address || null;
 
   // console.log(user,authenticated)
   // Dummy role mapping
@@ -39,9 +44,9 @@ export default function DashboardPage() {
   const receiverAddresses = ["0x456...", "0xdef..."];
 
   let role: "sender" | "receiver" | "unknown" = "unknown";
-  if (address) {
-    if (senderAddresses.includes(address)) role = "sender";
-    else if (receiverAddresses.includes(address)) role = "receiver";
+  if (walletAddress) {
+    if (senderAddresses.includes(walletAddress)) role = "sender";
+    else if (receiverAddresses.includes(walletAddress)) role = "receiver";
   }
 
   console.log(user.walletAddress, role);
@@ -90,13 +95,13 @@ export default function DashboardPage() {
           {/* Quick Switch (Testing Only) */}
           <div className="flex items-center gap-3 ml-4">
             <button
-              onClick={() => setAddress("0x123...")}
+              onClick={() => setMockAddress("0x123...")}
               className="px-3 py-1 bg-blue-600 rounded-md text-sm text-white"
             >
               📤 Sender
             </button>
             <button
-              onClick={() => setAddress("0x456...")}
+              onClick={() => setMockAddress("0x456...")}
               className="px-3 py-1 bg-green-600 rounded-md text-sm text-white"
             >
               📥 Receiver
@@ -110,16 +115,14 @@ export default function DashboardPage() {
         <DashboardWrapper>
           {loading ? (
             <p className="text-gray-400 text-center mt-20">Loading...</p>
-          ) : !user.walletAddress ? (
+          ) : !walletAddress ? (
             <WalletWarning />
           ) : role === "sender" ? (
             <GroupDashboard />
           ) : role === "receiver" ? (
             <ReceiverDashboard />
           ) : (
-            <p className="text-gray-400 text-center mt-20">
-              Wallet not recognized. Please contact admin 🔒
-            </p>
+            <GroupDashboard />
           )}
         </DashboardWrapper>
       </div>
