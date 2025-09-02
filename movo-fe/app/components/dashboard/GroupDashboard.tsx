@@ -62,6 +62,7 @@ export default function GroupDashboard({ onGroupSelect }: GroupDashboardProps) {
     setSelectedGroupId(groupId);
     setIsTopupModalOpen(true);
   };
+<<<<<<< Updated upstream
 
   const handleGroupSelect = (groupId: string) => {
     router.push(`/dashboard/sender/${groupId}`);
@@ -159,6 +160,26 @@ export default function GroupDashboard({ onGroupSelect }: GroupDashboardProps) {
           <h1 className="text-2xl font-bold text-white">Payment Groups</h1>
           <p className="text-white/60">Manage your payment groups and escrow streams</p>
         </div>
+=======
+
+  const handleGroupSelect = (groupId: string) => {
+    router.push(`/dashboard/sender/${groupId}`)
+  }
+
+  const handleCreateGroup = () => {
+    setIsCreateModalOpen(false);
+    setHasFetched(false);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* 1. Header & Stats */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Payment Groups</h1>
+          <p className="text-white/60">Manage your payment groups and escrow streams</p>
+        </div>
+>>>>>>> Stashed changes
         <button
           onClick={() => setIsCreateModalOpen(true)}
           className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg hover:shadow-cyan-500/25 transition-all duration-300 flex items-center space-x-2"
@@ -166,6 +187,9 @@ export default function GroupDashboard({ onGroupSelect }: GroupDashboardProps) {
           <Plus className="w-5 h-5" />
           <span>Create Group</span>
         </button>
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
       </div>
 

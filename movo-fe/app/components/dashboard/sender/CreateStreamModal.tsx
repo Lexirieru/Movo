@@ -101,6 +101,7 @@ export default function CreateStreamModal({
 
   const handleSubmit = async () => {
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     if (!formData.token || !formData.receiverAddress || !formData.amount)
       return;
 
@@ -128,6 +129,10 @@ export default function CreateStreamModal({
       onCreateStream(newStream);
     } catch (e) {
       console.log(e);
+=======
+    if (!walletClient) {
+      setMessage({ type: 'error', text: 'Wallet client not ready. Please try reconnecting your wallet.' });
+>>>>>>> Stashed changes
 =======
     if (!walletClient) {
       setMessage({ type: 'error', text: 'Wallet client not ready. Please try reconnecting your wallet.' });

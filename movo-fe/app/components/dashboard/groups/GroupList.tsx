@@ -17,6 +17,9 @@ interface GroupListProps {
 =======
   onGroupDeleted?: () => void;
   onTopupFund?: (groupId: string) => void;
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 }
 
