@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Wallet, DollarSign, Coins, ArrowRight, Info } from "lucide-react";
 import BankSelector from "./BankSelector";
 import BankForm from "./BankForm";
 import ClaimSuccess from "./ClaimSuccess";
+import { getUsdcIdrxRate } from "@/app/api/api";
 import { bankDictionary } from "@/lib/dictionary";
 
 interface ClaimModalProps {
@@ -29,6 +30,21 @@ export default function ClaimModal({
     bankAccountNumber: "",
     accountHolderName: "",
   });
+
+  const [rate, setRate] = useState<number | null>(null);
+
+  useEffect(() => {
+    const fetchRate = async () => {
+      try {
+        const res = await getUsdcIdrxRate();
+        setRate(res?.rate ?? null);
+      } catch (err) {
+        console.error("Failed to fetch rate", err);
+      }
+    };
+
+    fetchRate();
+  }, []);
 
   // Protocol fee and limits calculation
   const PROTOCOL_FEE_PERCENTAGE = 0.25; // 0.25%
@@ -226,13 +242,20 @@ export default function ClaimModal({
                       <div className="text-2xl font-bold text-white">
                         {claimType === "crypto"
                           ? `${netAmount.toFixed(4)} USDC`
-                          : `Rp ${(claimAmount * 15850).toLocaleString("id-ID")}`}
+                          : `${
+                              rate
+                                ? `Rp ${(claimAmount * rate).toLocaleString("id-ID")}`
+                                : "Loading..."
+                            }`}
                       </div>
                       <div className="text-white/60 text-sm">
                         {claimType === "crypto"
-                          ? "≈ Rp " +
-                            (claimAmount * 15850).toLocaleString("id-ID")
-                          : `From ${claimAmount.toFixed(4)} USDC (after fees)`}
+                          ? `${
+                              rate
+                                ? `≈ Rp ${(netAmount * rate).toLocaleString("id-ID")}`
+                                : "Loading..."
+                            }`
+                          : `From ${claimAmount.toFixed(4)} USDC`}
                       </div>
                     </div>
                   </div>

@@ -3,6 +3,7 @@
 import { ReactNode } from "react";
 import { useWallet } from "@/lib/walletContext";
 import WalletWarning from "./WalletWarning";
+import { useAuth } from "@/lib/userContext";
 
 interface DashboardWrapperProps {
   children: ReactNode;
@@ -10,9 +11,9 @@ interface DashboardWrapperProps {
 
 export default function DashboardWrapper({ children }: DashboardWrapperProps) {
   const { isConnected, isLoading } = useWallet();
+  const { user, loading } = useAuth();
 
-  // Show loading state while checking wallet connection
-  if (isLoading) {
+  if (isLoading || loading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center">
@@ -23,11 +24,9 @@ export default function DashboardWrapper({ children }: DashboardWrapperProps) {
     );
   }
 
-  // Show wallet warning if not connected
-  if (!isConnected) {
-    return <WalletWarning />;
+  if (user?.walletAddress && !isConnected) {
+    return <>{children}</>;
+    // return <WalletWarning />;
   }
-
-  // Show dashboard content if wallet is connected
   return <>{children}</>;
 }
