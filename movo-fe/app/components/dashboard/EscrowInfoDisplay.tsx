@@ -23,18 +23,25 @@ import {
 interface EscrowInfoDisplayProps {
   escrowId: string;
   tokenType: "USDC" | "IDRX";
-  onRefresh?: () => void;
 }
 
 export default function EscrowInfoDisplay({
   escrowId,
   tokenType,
-  onRefresh,
 }: EscrowInfoDisplayProps) {
   const { address, isConnected } = useWallet();
-  const [escrowInfo, setEscrowInfo] = useState<any>(null);
-  const [balanceSummary, setBalanceSummary] = useState<any>(null);
-  const [claimStatus, setClaimStatus] = useState<any>(null);
+  const [escrowInfo, setEscrowInfo] = useState<unknown>(null);
+  const [balanceSummary, setBalanceSummary] = useState<{
+    totalAllocated: bigint;
+    availableBalance: bigint;
+    totalDeposited: bigint;
+    totalWithdrawn: bigint;
+  } | null>(null);
+  const [claimStatus, setClaimStatus] = useState<{
+    canClaim: boolean;
+    claimableAmount: bigint;
+    reason?: string;
+  } | null>(null);
   const [withdrawableAmount, setWithdrawableAmount] = useState<string>("0");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +56,7 @@ export default function EscrowInfoDisplay({
       // Load escrow details
       const details = await getEscrowDetailsFromContract(escrowId, tokenType);
       if (details) {
-        setEscrowInfo(details);
+        setEscrowInfo(details.toString());
       }
 
       // Load balance summary
@@ -279,7 +286,7 @@ export default function EscrowInfoDisplay({
           <h4 className="text-lg font-semibold text-white mb-4">Receivers</h4>
 
           <div className="space-y-3">
-            {escrowInfo.receivers.map((receiver: any, index: number) => (
+            {escrowInfo.receivers.map((receiver: unknown, index: number) => (
               <div
                 key={index}
                 className="flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-lg"

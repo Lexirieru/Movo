@@ -54,7 +54,7 @@ const AVAILABLE_TOKENS: Token[] = [
   },
 ];
 
-export default function ({
+export default function TokenSelector({
   selectedToken,
   onTokenSelect,
   onClose,

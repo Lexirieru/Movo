@@ -2,7 +2,6 @@
 
 import { ReactNode } from "react";
 import { useWallet } from "@/lib/walletContext";
-import WalletWarning from "./WalletWarning";
 import { useAuth } from "@/lib/userContext";
 
 interface DashboardWrapperProps {

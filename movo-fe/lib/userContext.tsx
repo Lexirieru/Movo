@@ -7,7 +7,7 @@ import {
   useState,
   ReactNode,
 } from "react";
-import { useRouter } from "next/navigation";
+// import { useRouter } from "next/navigation";
 import { getMe } from "@/utils/auth";
 
 // tipe state auth
@@ -21,9 +21,9 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
+  // const router = useRouter();
 
   // cek auth pertama kali
   const checkAuth = async () => {

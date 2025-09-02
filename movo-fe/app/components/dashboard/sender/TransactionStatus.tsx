@@ -18,7 +18,7 @@ interface TransactionStatusProps {
 }
 
 export default function TransactionStatus({ steps, isVisible, onComplete }: TransactionStatusProps) {
-  const [currentStep, setCurrentStep] = useState(0);
+  // const [currentStep, setCurrentStep] = useState(0);
 
   useEffect(() => {
     if (steps.every(step => step.status === 'success')) {

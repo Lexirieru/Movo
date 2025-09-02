@@ -66,7 +66,7 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
     mapping(address => bytes32[]) public receiverEscrows; // Receiver escrows
     
     // IDRX contract address
-    address public constant IDRX_ADDRESS = 0x29Fc20a600B2392b8b659CBD47eAcA44F9Fb71B0; // Mock IDRX Base Testnet
+    address public constant IDRX_ADDRESS = 0x18Bc5bcC660cf2B9cE3cd51a404aFe1a0cBD3C22; // Mock IDRX Base Testnet
     
     // Platform fee (in basis points, 100 = 1%)
     uint256 public platformFeeBps = 25; // 0.25%

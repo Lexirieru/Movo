@@ -32,7 +32,7 @@ export default function TopupFundModal({
   onClose,
   groupId,
 }: TopupFundModalProps) {
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
 
   const walletClient = useWalletClientHook();
   const { isConnected, address } = useWallet();

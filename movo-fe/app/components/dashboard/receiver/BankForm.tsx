@@ -17,7 +17,7 @@ import { useAuth } from "@/lib/userContext";
 import {
   changeBankAccount,
   getBankAccount,
-  getBankAccountFromDatabase,
+  // getBankAccountFromDatabase,
   getUsdcIdrxRate,
 } from "@/app/api/api";
 import { BankAccountInformation } from "@/types/receiverInGroupTemplate";
@@ -51,8 +51,8 @@ interface SavedBankAccount {
 export default function BankForm({
   bankForm,
   onChange,
-  onSelectBank,
-  onConfirm,
+  // onSelectBank,
+  // onConfirm,
   isProcessing,
   claimAmount = 0,
   netAmount = 0,

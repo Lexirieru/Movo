@@ -1,9 +1,5 @@
 import BankForm from "../auth/components/BankForm";
 
-interface AuthCardProps {
-  isLoginView: boolean;
-  setIsLoginView: (value: boolean) => void;
-}
 
 export default function BankCard() {
   return (

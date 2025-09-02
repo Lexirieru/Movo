@@ -33,7 +33,7 @@ export default function SenderDashboard({
 }: SenderDashboardProps) {
   const { user, loading } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  // const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [streams, setStreams] = useState<Stream[]>([]);
   const [hasFetched, setHasFetched] = useState(false);
   const [filterType, setFilterType] = useState<"all" | "pending" | "completed">(

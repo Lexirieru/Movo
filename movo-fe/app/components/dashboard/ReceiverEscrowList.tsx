@@ -17,7 +17,7 @@ import {
 
 export default function ReceiverEscrowList() {
   const { address, isConnected } = useWallet();
-  const [escrows, setEscrows] = useState<any[]>([]);
+  const [escrows, setEscrows] = useState<unknown[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

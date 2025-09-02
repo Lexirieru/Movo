@@ -9,10 +9,10 @@ export const useWalletClientHook = () => {
   if (!wagmiWalletClient && isConnected && address) {
     return {
       account: { address: address as `0x${string}` },
-      writeContract: async (request: any) => {
+      writeContract: async (request: unknown) => {
         throw new Error('Wallet client not ready. Please try reconnecting your wallet.');
       },
-      simulateContract: async (request: any) => {
+      simulateContract: async (request: unknown) => {
         throw new Error('Wallet client not ready. Please try reconnecting your wallet.');
       }
     };

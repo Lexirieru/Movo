@@ -65,7 +65,7 @@ contract EscrowUSDC is ReentrancyGuard, Ownable, Pausable {
     mapping(address => bytes32[]) public receiverEscrows; // Receiver escrows
     
     // USDC contract address
-    address public constant USDC_ADDRESS = 0x7c1674812f7AB1bbaDAf80046f0b7C6b85E03aE3; // USDC Base testnet
+    address public constant USDC_ADDRESS = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913; // USDC Base testnet
     
     // Platform fee (in basis points, 100 = 1%)
     uint256 public platformFeeBps = 25; // 0.25%

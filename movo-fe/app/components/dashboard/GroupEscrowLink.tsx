@@ -18,9 +18,9 @@ interface GroupEscrowLinkProps {
 }
 
 export default function GroupEscrowLink({ groupId }: GroupEscrowLinkProps) {
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
 
-  const [escrowData, setEscrowData] = useState<any>(null);
+  const [escrowData, setEscrowData] = useState<unknown>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

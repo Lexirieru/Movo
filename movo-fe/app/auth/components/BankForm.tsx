@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react";
 import FormInput from "./FormInput";
-import { Mail, Lock, Router } from "lucide-react";
+import { Mail } from "lucide-react";
 import SubmitButton from "./SubmitButton";
 import { addBankAccount } from "@/app/api/api";
 import { useRouter } from "next/navigation";
@@ -10,7 +10,7 @@ import { bankDictionary } from "@/lib/dictionary";
 
 export default function BankForm() {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
 
   const [formData, setFormData] = useState({
     bankName : "",

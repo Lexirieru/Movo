@@ -7,17 +7,14 @@ import { useRouter } from "next/navigation";
 import GroupStatsCards from "./groups/GroupsStatsCards";
 import GroupFilterBar from "./groups/GroupFilterBar";
 import GroupList from "./groups/GroupList";
-import SmartContractStatus from "./SmartContractStatus";
-import { X, Users, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import CreateGroupModal from "./groups/CreateGroupModal";
 import TopupFundModal from "./groups/TopupFundModal";
 import { loadAllGroup, addGroup } from "@/app/api/api";
 
-interface GroupDashboardProps {
-  onGroupSelect?: (groupId: string) => void;
-}
 
-export default function GroupDashboard({ onGroupSelect }: GroupDashboardProps) {
+
+export default function GroupDashboard() {
   const { user, loading } = useAuth();
   const [groups, setGroups] = useState<GroupOfUser[]>([]);
   const [hasFetched, setHasFetched] = useState(false);
@@ -34,9 +31,9 @@ export default function GroupDashboard({ onGroupSelect }: GroupDashboardProps) {
       try {
         const groupData = await loadAllGroup(user._id);
         if (Array.isArray(groupData)) {
-          const formattedGroups: GroupOfUser[] = groupData.map((g: any) => ({
+          const formattedGroups: GroupOfUser[] = groupData.map((g: GroupOfUser) => ({
             ...g,
-            createdAt: new Date(g.createdAt),
+            createdAt: g.createdAt || new Date().toISOString(),
           }));
           setGroups(formattedGroups);
         }

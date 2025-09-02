@@ -2,7 +2,7 @@
 import { useState } from "react";
 import FormInput from "./FormInput";
 import SocialLogin from "./SocialLogin";
-import { Mail, Lock, Router } from "lucide-react";
+import { Mail, Lock } from "lucide-react";
 import SubmitButton from "./SubmitButton";
 import { login } from "@/app/api/api";
 import { useRouter } from "next/navigation";
