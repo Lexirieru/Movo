@@ -137,6 +137,15 @@ export const addReceiverToGroup = async (
   }
 };
 
+export const getEscrowId = async (_id: string, groupId: string) => {
+  try {
+    const response = await api.post("/getEscrowId", { _id, groupId });
+    return response.data;
+  } catch (err) {
+    console.log(err);
+  }
+};
+
 export const saveEscrowToDatabase = async (escrowData: {
   groupId: string;
   escrowId: string;
