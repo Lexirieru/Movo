@@ -195,7 +195,9 @@ export default function SenderDashboard({
             className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg hover:shadow-cyan-500/25 transition-all duration-300 flex items-center space-x-2 hover:scale-105"
           >
             <Plus className="w-5 h-5" />
-            <span>Create Escrow</span>
+            <span>
+              {filteredStreams.length === 0 ? "Create Escrow" : "Add Escrow"}
+            </span>
           </button>
         </div>
 
