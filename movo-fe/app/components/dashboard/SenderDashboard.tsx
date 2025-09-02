@@ -86,16 +86,16 @@ export default function SenderDashboard({
 
         setStreams(mappedStreams);
 
-        //nanti ambil escrowId disini
-        // if (mappedStreams.length > 0) {
-        //   const firstStream = mappedStreams[0];
-        //   setExistingEscrow({
-        //     escrowId: group.escrowId || "ESCROW_ID",
-        //     tokenType: firstStream.token as "USDC" | "IDRX",
-        //   });
-        // } else {
-        //   setExistingEscrow(null);
-        // }
+        // nanti ambil escrowId disini
+        if (mappedStreams.length > 0) {
+          const firstStream = mappedStreams[0];
+          setExistingEscrow({
+            escrowId: group.escrowId || "ESCROW_ID",
+            tokenType: firstStream.token as "USDC" | "IDRX",
+          });
+        } else {
+          setExistingEscrow(null);
+        }
 
         setHasFetched(true);
       } catch (err) {

@@ -11,7 +11,6 @@ import {
   parseTokenAmount,
   addReceiver,
 } from "@/lib/smartContract";
-import { div } from "motion/react-client";
 
 interface CreateStreamModalProps {
   isOpen: boolean;
@@ -342,10 +341,10 @@ export default function CreateStreamModal({
         <div className="flex justify-between items-center p-6 border-b border-white/10">
           <div>
             <h3 className="text-white text-xl font-semibold">
-              Create Escrow Streams
+              {modalTitle}
             </h3>
             <p className="text-white/60 text-sm mt-1">
-              Set up payment streams with smart contract escrow
+              {modalDescription}
             </p>
           </div>
           <button
@@ -386,26 +385,32 @@ export default function CreateStreamModal({
                 </select>
               </div>
             )}
-            <div>
-              {/* Selected Token Display */}
-              {formData.token && (
-                <div className="mt-3 p-3 bg-cyan-500/10 border border-cyan-500/20 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <div>
-                      <p className="text-cyan-300 font-medium">
-                        {formData.token}
+            {/* Selected Token Display */}
+            {formData.token && (
+              <div className="p-3 bg-cyan-500/10 border border-cyan-500/20 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <div className="text-2xl">
+                    {formData.token === "USDC" ? "💵" : "🔗"}
+                  </div>
+                  <div>
+                    <p className="text-cyan-300 font-medium">
+                      {isAddReceiverMode ? "Existing Escrow: " : "Selected Token: "}{formData.token}
+                    </p>
+                    {isAddReceiverMode && (
+                      <p className="text-cyan-400/80 text-sm">
+                        ID: {existingEscrow.escrowId}
                       </p>
-                    </div>
+                    )}
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Receivers */}
             <div>
               <div className="flex justify-between items-center mb-3">
                 <label className="text-white/80 text-sm font-medium">
-                  Receivers
+                  {isAddReceiverMode ? "New Receiver" : "Receivers"}
                 </label>
                 {!isAddReceiverMode && (
                   <button
@@ -505,7 +510,7 @@ export default function CreateStreamModal({
               {isLoading ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  <span>Creating Escrow...</span>
+                  <span>{loadingText}</span>
                 </>
               ) : !walletClient ? (
                 <>
@@ -517,7 +522,7 @@ export default function CreateStreamModal({
                 </>
               ) : (
                 <>
-                  <span>Create Escrow Streams</span>
+                  <span>{buttonText}</span>
                 </>
               )}
             </button>

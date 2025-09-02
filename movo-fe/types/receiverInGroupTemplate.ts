@@ -27,6 +27,7 @@ export interface GroupOfUser {
   totalRecipients?: number; // optional
   createdAt?: string; // dari timestamps mongoose
   updatedAt?: string; // dari timestamps mongoose
+  escrowId?: string
 }
 
 export interface BankAccountInformation {
