@@ -158,11 +158,7 @@ export default function BankForm({
       const bankCode = bankDictionary[bankForm.bankName];
 
       // update ke backend
-      await changeBankAccount(
-        user?.email,
-        bankForm.bankAccountNumber,
-        bankCode,
-      );
+      await changeBankAccount(user?._id, bankForm.bankAccountNumber, bankCode);
 
       // setelah sukses, ambil lagi data terbaru dari backend
       const refreshed = await getBankAccount(user?.email);

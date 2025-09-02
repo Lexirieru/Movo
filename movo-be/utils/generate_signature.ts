@@ -20,8 +20,6 @@ export function generateSignatureForRedeem(
   bankAccountName: string,
   walletAddress: string
 ) {
-
-
   const r_METHOD = "POST";
   const r_URL_ENDPOINT = "/api/transaction/redeem-request";
 

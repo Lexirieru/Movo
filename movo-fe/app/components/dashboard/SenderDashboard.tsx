@@ -56,6 +56,7 @@ export default function SenderDashboard({
 
     const fetchGroupStreams = async () => {
       try {
+        console.log(user.role);
         const group: GroupOfUser | null = await loadSpecifiedGroup(
           user._id,
           groupId,
@@ -184,7 +185,8 @@ export default function SenderDashboard({
               Escrow Streams
             </h2>
             <p className="text-white/60">
-              Manage escrow streams with smart contract security for automated token distribution.
+              Manage escrow streams with smart contract security for automated
+              token distribution.
             </p>
           </div>
 

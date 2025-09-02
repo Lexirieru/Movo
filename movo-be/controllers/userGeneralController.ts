@@ -5,8 +5,7 @@ import axios from "axios";
 import fs from "fs";
 import bcrypt from "bcrypt";
 import { generateCookiesToken } from "../routes/auth";
-import { sha256 } from "ethers/lib/utils";
-
+import { sha256, toUtf8Bytes } from "ethers/lib/utils";
 const movoApiKey = process.env.IDRX_API_KEY!;
 const movoSecretKey = process.env.IDRX_SECRET_KEY!;
 
@@ -135,6 +134,33 @@ export async function onBoardingUser(req: Request, res: Response) {
 //   }
 // }
 
+export async function giveRole(req: Request, res: Response) {
+  const { _id, role } = req.body;
+  try {
+    const isUser = await UserModel.findById(_id);
+    if (!isUser) {
+      res.status(404).json({ message: "User with specified id not found!" });
+      return;
+    }
+
+    const userData = await UserModel.findByIdAndUpdate(
+      _id,
+      { role },
+      { new: true }
+    );
+    if (!userData) {
+      res.status(200).json({
+        message: "Success updating user data's role",
+        data: userData!.role,
+      });
+    }
+    return;
+  } catch (err) {
+    console.log(err);
+  }
+}
+
+// kepake diawal pendaftaran aja
 export async function addBankAccount(req: Request, res: Response) {
   const { email, bankAccountNumber, bankCode } = req.body;
   const form = {
@@ -171,23 +197,35 @@ export async function addBankAccount(req: Request, res: Response) {
       },
     });
 
-    // const bank = `${user.bankName}_${user.bankAccountNumber}`;
-    // console.log(bank)
-    // const hashBankAccountNumber = sha256(bank).toString();
+    const bank = `${user.bankName}_${user.bankAccountNumber}`;
+    console.log(bank);
+    const hashBankAccountNumber = sha256(toUtf8Bytes(bank));
+
     console.log(resData.data.data);
     console.log(resData.data.statusCode);
 
     const updatedUser = await UserModel.findOneAndUpdate(
       { email },
       {
+        hashBankAccountNumber,
         bankId: resData.data.data.id,
-        // hashBankAccountNumber,
         bankAccountNumber: resData.data.data.bankAccountNumber,
         bankAccountName: resData.data.data.bankAccountName,
         bankCode: resData.data.data.bankCode,
         bankName: resData.data.data.bankName,
         depositWalletAddress:
           resData.data.data.DepositWalletAddress.walletAddress,
+
+        // push ke list bank yang terdaftar
+        $push: {
+          ListOfRegisteredBankAccount: {
+            hashBankAccountNumber,
+            bankAccountNumber: resData.data.data.bankAccountNumber,
+            bankAccountName: resData.data.data.bankAccountName,
+            bankCode: resData.data.data.bankCode,
+            bankName: resData.data.data.bankName,
+          },
+        },
       },
       { new: true }
     );
@@ -205,6 +243,46 @@ export async function addBankAccount(req: Request, res: Response) {
     console.log(err);
     res.status(500).json(err);
     return;
+  }
+}
+
+export async function addWalletAddress(req: Request, res: Response) {
+  const { _id, walletAddress } = req.body;
+
+  if (!_id || !walletAddress) {
+    res.status(400).json({ message: "id and walletAddress are required" });
+    return;
+  }
+
+  try {
+    const isWalletAddress = await UserModel.findOne({ walletAddress });
+    if (isWalletAddress) {
+      res.status(400).json({
+        message:
+          "Wallet address has been used before, please use another wallet",
+      });
+      return;
+    }
+
+    const userData = await UserModel.findByIdAndUpdate(
+      _id,
+      { walletAddress },
+      { new: true }
+    );
+
+    if (!userData) {
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
+
+    res.status(200).json({
+      message: "Wallet address updated successfully",
+      data: userData,
+    });
+    return;
+  } catch (err: any) {
+    console.error("Error updating wallet address:", err);
+    res.status(500).json({ error: err.message });
   }
 }
 
@@ -269,7 +347,6 @@ export async function getBankAccountFromDatabase(req: Request, res: Response) {
     return;
   }
 }
-
 // acuannya adalah bankId (bankId adalah id yang digenerate oleh idrx setiap selesai adding bank accounts)
 export async function deleteBankAccount(req: Request, res: Response) {
   const { email } = req.body;
@@ -334,16 +411,63 @@ export async function deleteBankAccount(req: Request, res: Response) {
   return;
 }
 
+// ini adalah local function untuk ngesave history account bank information yang pernah
+// diinput user
+async function saveHistoryBankAccountData(_id: string) {
+  try {
+    const user = await UserModel.findById(_id);
+    if (!user) {
+      console.log("User with specified id is not found");
+      return;
+    }
+    const exists = user.ListOfRegisteredBankAccount?.some(
+      (acc: any) => acc.hashBankAccountNumber === hashBankAccountNumber
+    );
+    if (exists) {
+      console.log("Bank account history already registered");
+      return false; // return user tanpa update
+    }
+
+    const bank = `${user.bankName}_${user.bankAccountNumber}`;
+    const hashBankAccountNumber = sha256(toUtf8Bytes(bank));
+
+    const updatedUser = await UserModel.findByIdAndUpdate(
+      _id,
+      {
+        $push: {
+          ListOfRegisteredBankAccount: {
+            hashBankAccountNumber,
+            bankAccountNumber: user.bankAccountNumber,
+            bankAccountName: user.bankAccountName,
+            bankCode: user.bankCode,
+            bankName: user.bankName,
+          },
+        },
+      },
+      { new: true }
+    );
+    if (updatedUser) {
+      console.log("User's bank account information saved successfully");
+      return true;
+    } else if (!updatedUser) {
+      console.log("Failed to save user's bank account information");
+      return false;
+    }
+  } catch (err: any) {
+    console.error("Error updating user:", err);
+  }
+}
+
 // acuannya adalah bankId (bankId adalah id yang digenerate oleh idrx setiap selesai adding bank accounts)
 export async function changeBankAccount(req: Request, res: Response) {
-  const { email, bankAccountNumber, bankCode } = req.body;
+  const { _id, bankAccountNumber, bankCode } = req.body;
 
-  if (!email || !bankAccountNumber || !bankCode) {
+  if (!_id || !bankAccountNumber || !bankCode) {
     res.status(400).json({ message: "Missing required fields" });
     return;
   }
 
-  const user = await UserModel.findOne({ email });
+  const user = await UserModel.findOne({ _id });
   if (!user) {
     res.status(404).json({ message: "User not found" });
     return;
@@ -352,6 +476,15 @@ export async function changeBankAccount(req: Request, res: Response) {
   const timestamp = Math.round(new Date().getTime()).toString();
 
   try {
+    const historySaved = await saveHistoryBankAccountData(_id);
+    console.log(historySaved);
+    if (!historySaved) {
+      res
+        .status(400)
+        .json({ message: "Failed to save bank account history information" });
+      return;
+    }
+
     // 1. Delete existing bank account if exists
     if (user.bankId) {
       const deletePath = `https://idrx.co/api/auth/delete-bank-account/${user.bankId}`;
@@ -363,7 +496,7 @@ export async function changeBankAccount(req: Request, res: Response) {
         user.secretKey!
       );
 
-      await axios.delete(deletePath, {
+      const deleteBank = await axios.delete(deletePath, {
         headers: {
           "Content-Type": "application/json",
           "idrx-api-key": user.apiKey!,
@@ -371,15 +504,28 @@ export async function changeBankAccount(req: Request, res: Response) {
           "idrx-api-ts": timestamp,
         },
       });
+
+      if (!deleteBank) {
+        res
+          .status(400)
+          .json({ message: "Failed to delete previous bank account" });
+        return;
+      }
+    } else {
+      res
+        .status(404)
+        .json({ message: "Previous bank account information not found" });
+      return;
     }
 
     // 2. Add new bank account
     const addPath = "https://idrx.co/api/auth/add-bank-account";
     const form = { bankAccountNumber, bankCode };
+
     const addSig = createSignature(
       "POST",
       addPath,
-      Buffer.from(JSON.stringify(form), "base64").toString("utf8"),
+      JSON.stringify(form), // cukup JSON.stringify
       timestamp,
       user.secretKey!
     );
@@ -394,15 +540,16 @@ export async function changeBankAccount(req: Request, res: Response) {
     });
 
     const newBankData = addRes.data.data;
-    // const bank = `${newBankData.bankName}_${newBankData.bankAccountNumber}`;
-    // const hashBankAccountNumber = await sha256(bank).toString();
+
+    const bank = `${newBankData.bankName}_${newBankData.bankAccountNumber}`;
+    const hashBankAccountNumber = sha256(toUtf8Bytes(bank));
 
     // 3. Update user with new bank info
-    const updatedUser = await UserModel.findOneAndUpdate(
-      { email },
+    const updatedUser = await UserModel.findByIdAndUpdate(
+      _id,
       {
         bankId: newBankData.id,
-        // hashBankAccountNumber,
+        hashBankAccountNumber,
         bankAccountNumber: newBankData.bankAccountNumber,
         bankAccountName: newBankData.bankAccountName,
         bankCode: newBankData.bankCode,
@@ -412,12 +559,10 @@ export async function changeBankAccount(req: Request, res: Response) {
       { new: true }
     );
 
-    res
-      .status(200)
-      .json({
-        message: "Bank account changed successfully",
-        data: updatedUser,
-      });
+    res.status(200).json({
+      message: "Bank account changed successfully",
+      data: updatedUser,
+    });
   } catch (err) {
     console.error(err);
     res

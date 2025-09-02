@@ -40,9 +40,10 @@ const UserDataSchema = new Schema(
       required: true,
       unique: true,
     },
+    // dibuat satu akun hanya bisa terpaut ke satu wallet address
     walletAddress: {
       type: String,
-      require: false,
+      required: false,
       unique: true,
     },
     depositWalletAddress: {
@@ -70,9 +71,15 @@ const UserDataSchema = new Schema(
       type: String,
       required: false,
     },
+
     availableBalance: {
       type: Number,
       required: false,
+    },
+    role: {
+      type: String,
+      required: true,
+      default: "non",
     },
     ListOfRegisteredBankAccount: [
       {
@@ -154,10 +161,6 @@ const GroupOfUserSchema = new Schema(
           type: Number,
           required: false,
         },
-        role: {
-          type: String,
-          required: false,
-        },
       },
     ],
     totalRecipients: {
@@ -185,6 +188,10 @@ const LoginSessionTokenSchema = new Schema({
     required: true,
   },
   token: {
+    type: String,
+    required: true,
+  },
+  role: {
     type: String,
     required: true,
   },

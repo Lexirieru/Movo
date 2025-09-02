@@ -200,7 +200,6 @@ export async function editReceiverAmountInGroup(req: Request, res: Response) {
     return;
   }
 }
-
 //untuk ngefetch semua receivers yang ada di suatu grup
 export async function fetchReceiversInGroup(req: Request, res: Response) {
   const { groupId, _id } = req.body;
@@ -282,6 +281,7 @@ export async function loadSpecifiedGroup(req: Request, res: Response) {
     return;
   }
 }
+
 // untuk ngeremove receiver dari group
 export async function removeReceiverDataFromGroup(req: Request, res: Response) {
   const { receiverId, groupId, senderId } = req.body;

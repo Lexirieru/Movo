@@ -819,8 +819,6 @@ export async function checkIDRXBalance() {
   console.log("IDRX decimals:", decimals);
 }
 
-
-
 export async function checkGasFeeEstimation(
   amount: string,
   bankAccount: string,
@@ -845,7 +843,7 @@ export async function burnIdrx(
   bankAccountNumber: string
 ) {
   const bank = `${bankAccount}_${bankAccountNumber}`;
-  
+
   const hashBankAccountNumber = await sha256(bank).toString();
 
   // Jika IDRX decimals = 2, maka 21000 IDRX = 2100000

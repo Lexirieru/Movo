@@ -98,13 +98,13 @@ export const getBankAccountFromDatabase = async (email: string) => {
 };
 
 export const changeBankAccount = async (
-  email: string,
+  _id: string,
   bankAccountNumber: string,
   bankCode: string,
 ) => {
   try {
     const response = await api.post("/changeBankAccount", {
-      email,
+      _id,
       bankAccountNumber,
       bankCode,
     });
@@ -277,7 +277,7 @@ export const logout = async () => {
 export const saveEscrowToDatabase = async (escrowData: {
   groupId: string;
   escrowId: string;
-  tokenType: 'USDC' | 'IDRX';
+  tokenType: "USDC" | "IDRX";
   senderAddress: string;
   totalAmount: string;
   receivers: Array<{
@@ -290,10 +290,13 @@ export const saveEscrowToDatabase = async (escrowData: {
   createdAt: string;
 }) => {
   try {
-    const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/escrows`, escrowData);
+    const response = await axios.post(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/escrows`,
+      escrowData,
+    );
     return response.data;
   } catch (error) {
-    console.error('Error saving escrow to database:', error);
+    console.error("Error saving escrow to database:", error);
     throw error;
   }
 };
@@ -301,14 +304,16 @@ export const saveEscrowToDatabase = async (escrowData: {
 // Get escrow by groupId
 export const getEscrowByGroupId = async (groupId: string) => {
   try {
-    const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/escrows/group/${groupId}`);
+    const response = await axios.get(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/escrows/group/${groupId}`,
+    );
     return response.data;
   } catch (error: any) {
     if (error.response?.status === 404) {
       // No escrow found for this group - this is expected if escrow hasn't been created yet
       return null;
     }
-    console.error('Error getting escrow by groupId:', error);
+    console.error("Error getting escrow by groupId:", error);
     throw error;
   }
 };
@@ -316,10 +321,12 @@ export const getEscrowByGroupId = async (groupId: string) => {
 // Get escrow by escrowId
 export const getEscrowByEscrowId = async (escrowId: string) => {
   try {
-    const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/escrows/${escrowId}`);
+    const response = await axios.get(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/escrows/${escrowId}`,
+    );
     return response.data;
   } catch (error) {
-    console.error('Error getting escrow by escrowId:', error);
+    console.error("Error getting escrow by escrowId:", error);
     throw error;
   }
 };
@@ -327,10 +334,12 @@ export const getEscrowByEscrowId = async (escrowId: string) => {
 // Get all escrows for a user (as sender)
 export const getUserEscrows = async (userId: string) => {
   try {
-    const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/escrows/user/${userId}`);
+    const response = await axios.get(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/escrows/user/${userId}`,
+    );
     return response.data;
   } catch (error) {
-    console.error('Error getting user escrows:', error);
+    console.error("Error getting user escrows:", error);
     throw error;
   }
 };

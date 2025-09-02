@@ -1,10 +1,12 @@
 import {
   addBankAccount,
+  addWalletAddress,
   changeBankAccount,
   deleteBankAccount,
   getBankAccount,
   getBankAccountFromDatabase,
   getOrganizationMembers,
+  giveRole,
   onBoardingUser,
 } from "../controllers/userGeneralController";
 
@@ -51,6 +53,11 @@ const routes: RouteDefinition[] = [
     method: "post",
     path: "/addBankAccount",
     action: addBankAccount,
+  },
+  {
+    method: "post",
+    path: "/addWalletAddress",
+    action: addWalletAddress,
   },
   {
     method: "post",
@@ -125,6 +132,11 @@ const routes: RouteDefinition[] = [
     method: "post",
     path: "/loadSpecifiedGroupForReceiver",
     action: loadSpecificGroupInformation,
+  },
+  {
+    method: "post",
+    path: "/giveRole",
+    action: giveRole,
   },
 ];
 
