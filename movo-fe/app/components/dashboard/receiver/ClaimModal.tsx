@@ -30,12 +30,19 @@ export default function ClaimModal({
     accountHolderName: "",
   });
 
-  // Protocol fee calculation
+  // Protocol fee and limits calculation
   const PROTOCOL_FEE_PERCENTAGE = 0.25; // 0.25%
+  const MIN_PAYOUT_AMOUNT = 2; // $2 minimum
+  const MAX_PAYOUT_AMOUNT = 5000; // $5000 maximum
   const claimAmount = parseFloat(customAmount) || 0;
   const protocolFee = claimAmount * (PROTOCOL_FEE_PERCENTAGE / 100);
   const netAmount = claimAmount - protocolFee;
-  const maxClaimAmount = totalAmount;
+  // maxClaimAmount will be the lower of totalAmount and MAX_PAYOUT_AMOUNT
+  const maxClaimAmount = Math.min(totalAmount, MAX_PAYOUT_AMOUNT);
+
+  // Validation functions
+  const isAmountValid =
+    claimAmount >= MIN_PAYOUT_AMOUNT && claimAmount <= maxClaimAmount;
 
   const handleBankSelect = (bankName: string) => {
     setBankForm((prev) => ({ ...prev, bankName }));
@@ -52,6 +59,7 @@ export default function ClaimModal({
     // Allow only numbers and decimal point
     if (value === "" || /^\d*\.?\d*$/.test(value)) {
       const numValue = parseFloat(value);
+      // Allow empty value for UX purposes or valid amounts within both balance and max limit
       if (value === "" || (numValue >= 0 && numValue <= maxClaimAmount)) {
         setCustomAmount(value);
       }
@@ -169,6 +177,18 @@ export default function ClaimModal({
                     </div>
                   </div>
 
+                  {/* Validation Messages */}
+                  {claimAmount > 0 && !isAmountValid && (
+                    <div className="mt-2 flex items-center text-red-400 text-sm">
+                      <Info className="w-4 h-4 mr-2" />
+                      {claimAmount < MIN_PAYOUT_AMOUNT
+                        ? `Minimum payout amount is ${MIN_PAYOUT_AMOUNT} USDC`
+                        : claimAmount > totalAmount
+                          ? `Amount exceeds your available balance of ${totalAmount.toFixed(4)} USDC`
+                          : `Maximum payout amount is ${MAX_PAYOUT_AMOUNT} USDC`}
+                    </div>
+                  )}
+
                   {/* Max Button */}
                   <button
                     onClick={() => setCustomAmount(maxClaimAmount.toString())}
@@ -248,12 +268,12 @@ export default function ClaimModal({
               {claimType === "crypto" && (
                 <button
                   onClick={handleClaim}
-                  disabled={
-                    isProcessing ||
-                    claimAmount <= 0 ||
-                    claimAmount > maxClaimAmount
-                  }
-                  className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white py-4 rounded-xl font-medium hover:shadow-lg transition-all flex items-center justify-center space-x-2 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
+                  disabled={isProcessing || !isAmountValid || claimAmount <= 0}
+                  className={`w-full py-4 rounded-xl font-medium transition-all flex items-center justify-center space-x-2 ${
+                    isProcessing || !isAmountValid || claimAmount <= 0
+                      ? "bg-gray-600 text-white/50 cursor-not-allowed"
+                      : "bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:shadow-lg hover:scale-105"
+                  }`}
                 >
                   {isProcessing ? (
                     <>

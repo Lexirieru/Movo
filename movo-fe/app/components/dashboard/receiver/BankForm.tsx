@@ -71,8 +71,13 @@ export default function BankForm({
   const [selectedSavedBank, setSelectedSavedBank] =
     useState<SavedBankAccount | null>(null);
 
+  const MIN_PAYOUT_AMOUNT = 2;
+  const MAX_PAYOUT_AMOUNT = 5000;
   const isFormValid =
-    bankForm.bankName && bankForm.bankAccountNumber && claimAmount > 0;
+    bankForm.bankName &&
+    bankForm.bankAccountNumber &&
+    claimAmount >= MIN_PAYOUT_AMOUNT &&
+    claimAmount <= MAX_PAYOUT_AMOUNT;
   const estimatedTime = "1-3 business days";
 
   // cek apakah ada perubahan
@@ -450,8 +455,20 @@ export default function BankForm({
 
         <button
           onClick={onConfirm}
-          disabled={!isFormValid || isProcessing}
-          className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 rounded-xl font-medium hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 disabled:hover:scale-100 flex items-center justify-center space-x-2"
+          disabled={
+            !isFormValid ||
+            isProcessing ||
+            claimAmount < 2 ||
+            claimAmount > 5000
+          }
+          className={`flex-1 py-3 rounded-xl font-medium transition-all flex items-center justify-center space-x-2 ${
+            !isFormValid ||
+            isProcessing ||
+            claimAmount < 2 ||
+            claimAmount > 5000
+              ? "bg-gray-600 text-white/50 cursor-not-allowed"
+              : "bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:shadow-lg hover:scale-105"
+          }`}
         >
           {isProcessing ? (
             <>
