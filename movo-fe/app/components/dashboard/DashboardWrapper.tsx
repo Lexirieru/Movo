@@ -26,7 +26,7 @@ export default function DashboardWrapper({ children }: DashboardWrapperProps) {
 
   if (user?.walletAddress && !isConnected) {
     return <>{children}</>;
-    return <WalletWarning />;
+    // return <WalletWarning />;
   }
   return <>{children}</>;
 }

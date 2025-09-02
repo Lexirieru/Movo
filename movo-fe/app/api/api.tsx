@@ -301,23 +301,6 @@ export const logout = async () => {
   return response.data.message;
 };
 
-// Get escrow by groupId
-export const getEscrowByGroupId = async (groupId: string) => {
-  try {
-    const response = await axios.get(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/escrows/group/${groupId}`,
-    );
-    return response.data;
-  } catch (error: any) {
-    if (error.response?.status === 404) {
-      // No escrow found for this group - this is expected if escrow hasn't been created yet
-      return null;
-    }
-    console.error("Error getting escrow by groupId:", error);
-    throw error;
-  }
-};
-
 // Get escrow by escrowId
 export const getEscrowByEscrowId = async (escrowId: string) => {
   try {

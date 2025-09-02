@@ -17,7 +17,6 @@ import { WithdrawHistoryModel } from "../models/transactionRecordModel";
 
 dotenv.config();
 
-
 export const receiverListener = async () => {
   if (
     !process.env.LISK_SEPOLIA ||
@@ -28,7 +27,6 @@ export const receiverListener = async () => {
     throw new Error("Missing environment variables. Cek kembali file .env");
   }
 
-  
   const provider = new ethers.providers.JsonRpcProvider(
     process.env.LISK_SEPOLIA!
   );
@@ -38,32 +36,32 @@ export const receiverListener = async () => {
     payrollAbi,
     provider
   );
-  
+
   // listen to receiver withdraw smartcontract's event
   contract.on(
     "WithdrawApproved",
     async (
       // wajib dari IDRX untuk redeem
-      txHash : string,
-      networkChainId : string,
+      txHash: string,
+      networkChainId: string,
       amountTransfer: string,
-      // bank account number 
-      bankAccount : string,
-      bankCode : string,
+      // bank account number
+      bankAccount: string,
+      bankCode: string,
       // nama bank
       bankName: string,
       // nama orangnya di bank tersebut
       bankAccountName: string,
-      walletAddress : string,
+      walletAddress: string,
 
-      withdrawId : string,
+      withdrawId: string,
       receiverId: string,
-      choice : string,
+      choice: string,
       originCurrency: string,
       targetCurrency: string,
       bankId: string,
       depositWalletAddress: string,
-      
+
       event: string
     ) => {
       console.log(`[EVENT RECEIVED]`);
@@ -83,13 +81,13 @@ export const receiverListener = async () => {
         bankName,
         bankAccountName,
         walletAddress,
-        networkChainId
-      });      
+        networkChainId,
+      });
       // kalok wallet to wallet (originCurrencynya crypto non idrx), listen ke sc  (sc send langsung ke walletAddress)
-      if(choice == "crypto"){
-        // listen to sc (sc send langsung ke walletAddress) -> backend dapetin parameter yang disend dari eventnya sc -> 
+      if (choice == "crypto") {
+        // listen to sc (sc send langsung ke walletAddress) -> backend dapetin parameter yang disend dari eventnya sc ->
         // backend ngesave parameter tersebut ke db
-        try{
+        try {
           const withdrawHistory = new WithdrawHistoryModel({
             withdrawId,
             receiverId,
@@ -98,19 +96,20 @@ export const receiverListener = async () => {
             originCurrency,
             targetCurrency,
             networkChainId,
-            walletAddress
-          })
+            walletAddress,
+          });
           await withdrawHistory.save();
-        }
-        catch(err){
+        } catch (err) {
           console.log(err);
           return;
         }
       }
       // kalok wallet to fiat {originCurrencynya crypto usdc/usdt}, listen ke sc (sc send langsung ke depositwalletaddress)
-      else if(choice == "fiat" && (originCurrency == "USDC" || originCurrency == "USDT"))
-      {
-        try{
+      else if (
+        choice == "fiat" &&
+        (originCurrency == "USDC" || originCurrency == "USDT")
+      ) {
+        try {
           const withdrawHistory = new WithdrawHistoryModel({
             withdrawId,
             receiverId,
@@ -122,21 +121,16 @@ export const receiverListener = async () => {
             bankId,
             bankName,
             bankAccountName,
-            bankAccountNumber : bankAccount
-          })
+            bankAccountNumber: bankAccount,
+          });
           await withdrawHistory.save();
-        }
-        catch(err){
+        } catch (err) {
           console.log(err);
           return;
         }
-        // listen to sc (sc send langsung ke depositWalletAddress) -> backend dapetin parameter yang disend dari eventnya sc -> 
+        // listen to sc (sc send langsung ke depositWalletAddress) -> backend dapetin parameter yang disend dari eventnya sc ->
         // backend ngesave parameter tersebut ke db
       }
     }
   );
-
-  console.log("Listening for PayrollApproved...");
 };
-
-

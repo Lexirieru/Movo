@@ -1,12 +1,11 @@
 "use client";
 
-import { deleteGroup } from "@/app/api/api";
+import { deleteGroup, loadSpecifiedGroup } from "@/app/api/api";
 import { useAuth } from "@/lib/userContext";
 import { GroupOfUser } from "@/types/receiverInGroupTemplate";
 import { ReceiverInGroup } from "@/types/receiverInGroupTemplate";
 import { Users, ArrowRight, Clock, Delete, DollarSign } from "lucide-react";
 import { useState, useEffect } from "react";
-import { getEscrowByGroupId } from "@/app/api/api";
 
 interface GroupListProps {
   groups: GroupOfUser[];
@@ -42,23 +41,25 @@ export default function GroupList({
   onTopupFund,
 }: GroupListProps) {
   const { user, loading } = useAuth();
-  const [escrowData, setEscrowData] = useState<{[key: string]: any}>({});
-  const [escrowLoading, setEscrowLoading] = useState<{[key: string]: boolean}>({});
+  const [escrowData, setEscrowData] = useState<{ [key: string]: any }>({});
+  const [escrowLoading, setEscrowLoading] = useState<{
+    [key: string]: boolean;
+  }>({});
 
   // Load escrow data for all groups
   useEffect(() => {
     const loadEscrowData = async () => {
       for (const group of groups) {
         if (!escrowData[group.groupId] && !escrowLoading[group.groupId]) {
-          setEscrowLoading(prev => ({ ...prev, [group.groupId]: true }));
+          setEscrowLoading((prev) => ({ ...prev, [group.groupId]: true }));
           try {
-            const data = await getEscrowByGroupId(group.groupId);
-            setEscrowData(prev => ({ ...prev, [group.groupId]: data }));
+            const data = await loadSpecifiedGroup(user._id, group.groupId);
+            setEscrowData((prev) => ({ ...prev, [group.groupId]: data }));
           } catch (error) {
             // If no escrow found, set to null
-            setEscrowData(prev => ({ ...prev, [group.groupId]: null }));
+            setEscrowData((prev) => ({ ...prev, [group.groupId]: null }));
           } finally {
-            setEscrowLoading(prev => ({ ...prev, [group.groupId]: false }));
+            setEscrowLoading((prev) => ({ ...prev, [group.groupId]: false }));
           }
         }
       }
@@ -84,7 +85,7 @@ export default function GroupList({
     if (escrow && escrow.totalAmount && escrow.tokenType) {
       // Convert from wei/smallest unit to human readable
       const amount = parseFloat(escrow.totalAmount);
-      const decimals = escrow.tokenType === 'USDC' ? 6 : 2;
+      const decimals = escrow.tokenType === "USDC" ? 6 : 2;
       const humanAmount = amount / Math.pow(10, decimals);
       return `${humanAmount.toFixed(decimals === 6 ? 2 : 0)} ${escrow.tokenType}`;
     }
@@ -98,13 +99,13 @@ export default function GroupList({
       return {
         text: "Escrow Active",
         color: "text-green-400",
-        icon: "🟢"
+        icon: "🟢",
       };
     }
     return {
       text: "No Escrow",
-      color: "text-yellow-400", 
-      icon: "🟡"
+      color: "text-yellow-400",
+      icon: "🟡",
     };
   };
 
@@ -133,7 +134,7 @@ export default function GroupList({
       onGroupSelect(groupId);
     }
   };
-  
+
   const handleDeleteGroup = async (groupId: string) => {
     // Tampilkan popup konfirmasi
     const confirmDelete = window.confirm(
@@ -160,7 +161,7 @@ export default function GroupList({
           const groupStatus = getGroupStatus(group.groupId);
           const recipientCount = getDynamicRecipientCount(group.groupId);
           const totalAmount = getDynamicTotalAmount(group.groupId);
-          
+
           return (
             <div
               key={group.groupId}
@@ -261,7 +262,7 @@ export default function GroupList({
                 const groupStatus = getGroupStatus(group.groupId);
                 const recipientCount = getDynamicRecipientCount(group.groupId);
                 const totalAmount = getDynamicTotalAmount(group.groupId);
-                
+
                 return (
                   <tr
                     key={group.groupId}
