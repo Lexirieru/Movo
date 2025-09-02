@@ -6,12 +6,22 @@ import { useAuth } from "@/lib/userContext";
 import { addReceiverToGroup, saveEscrowToDatabase } from "@/app/api/api";
 import { useParams } from "next/navigation";
 import { useWalletClientHook } from "@/lib/useWalletClient";
-import { createEscrowOnchain, parseTokenAmount } from "@/lib/smartContract";
+import {
+  createEscrowOnchain,
+  parseTokenAmount,
+  addReceiver,
+} from "@/lib/smartContract";
+import { div } from "motion/react-client";
 
 interface CreateStreamModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreateStream: (stream: ReceiverInGroup) => void;
+  //If there is already escrow
+  existingEscrow?: {
+    escrowId: string;
+    tokenType: "USDC" | "IDRX";
+  };
 }
 
 interface ReceiverData {
@@ -48,26 +58,48 @@ export default function CreateStreamModal({
   isOpen,
   onClose,
   onCreateStream,
+  existingEscrow,
 }: CreateStreamModalProps) {
   const params = useParams();
   const groupId = params.groupId as string;
   const { user } = useAuth();
   const walletClient = useWalletClientHook();
-  const [formData, setFormData] = useState<FormData>({
-    token: null,
-    receivers: [{ id: "1", address: "", fullname: "", amount: "" }],
-  });
+
+  const initialFormData: FormData = existingEscrow
+    ? {
+        token: existingEscrow.tokenType,
+        receivers: [{ id: "1", address: "", fullname: "", amount: "" }],
+      }
+    : {
+        token: null,
+        receivers: [{ id: "1", address: "", fullname: "", amount: "" }],
+      };
+
+  const [formData, setFormData] = useState<FormData>(initialFormData);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error" | "info";
     text: string;
   } | null>(null);
 
+  // Determine Mode
+  const isAddReceiverMode = !!existingEscrow;
+  const modalTitle = isAddReceiverMode
+    ? "Add Receiver to Escrow"
+    : "Create Escrow Stream";
+  const modalDescription = isAddReceiverMode
+    ? `Add a new receiver to existing escrow (${existingEscrow.tokenType})`
+    : "Set up payment streams with smart contract escrow";
+  const buttonText = isAddReceiverMode
+    ? "Add Receiver to Escrow"
+    : "Create Escrow Stream";
+  const loadingText = isAddReceiverMode ? "Adding Receiver" : "Creating Escrow";
   const handleTokenSelect = (token: "USDC" | "IDRX") => {
     setFormData({ ...formData, token });
   };
 
-  const addReceiver = () => {
+  const addNewReceiver = () => {
+    if (isAddReceiverMode) return;
     const newId = (formData.receivers.length + 1).toString();
     setFormData({
       ...formData,
@@ -79,6 +111,7 @@ export default function CreateStreamModal({
   };
 
   const removeReceiver = (id: string) => {
+    if (isAddReceiverMode || formData.receivers.length <= 1) return;
     if (formData.receivers.length > 1) {
       setFormData({
         ...formData,
@@ -135,63 +168,28 @@ export default function CreateStreamModal({
     setMessage(null);
 
     try {
-      // Prepare escrow data for onchain creation
-      const receivers = formData.receivers.map(
-        (r) => r.address as `0x${string}`,
-      );
-      const amounts = formData.receivers.map((r) =>
-        parseTokenAmount(r.amount, formData.token === "USDC" ? 6 : 2),
-      );
-      const totalAmount = amounts.reduce(
-        (acc, amount) => acc + amount,
-        BigInt(0),
-      );
-
-      // Debug logging
-      console.log("Escrow data prepared:", {
-        receivers,
-        amounts: amounts.map((a) => a.toString()),
-        totalAmount: totalAmount.toString(),
-        tokenType: formData.token,
-      });
-
-      // Create escrow onchain first
-      const escrowResult = await createEscrowOnchain(
-        walletClient,
-        formData.token,
-        {
-          receivers,
-          amounts,
-          totalAmount,
-        },
-      );
-
-      if (!escrowResult.success) {
-        throw new Error(
-          escrowResult.error || "Failed to create escrow onchain",
+      if (isAddReceiverMode) {
+        const receiver = formData.receivers[0];
+        const parsedAmount = parseTokenAmount(
+          receiver.amount,
+          formData.token == "USDC" ? 6 : 2,
         );
-      }
-      const escrowData = {
-        groupId: groupId,
-        escrowId: escrowResult.escrowId ?? "",
-        tokenType: formData.token,
-        senderAddress: walletClient.account.address,
-        totalAmount: totalAmount.toString(),
-        receivers: formData.receivers.map((r) => ({
-          address: r.address,
-          fullname: r.fullname,
-          amount: r.amount,
-        })),
-        transactionHash: escrowResult.transactionHash ?? "",
-        status: "active",
-        createdAt: new Date().toISOString(),
-      };
 
-      // Save escrow data to database to link escrowId with groupId
-      await saveEscrowToDatabase(escrowData);
+        const addReceiverResult = await addReceiver(
+          walletClient,
+          formData.token,
+          existingEscrow.escrowId,
+          receiver.address as `0x${string}`,
+          parsedAmount,
+        );
 
-      // If escrow created successfully onchain, save to backend
-      for (const receiver of formData.receivers) {
+        if (!addReceiverResult.success) {
+          throw new Error(
+            addReceiverResult.error ||
+              "Failed to add receiver to escrow onchain",
+          );
+        }
+
         await addReceiverToGroup(
           user._id,
           formData.token,
@@ -210,15 +208,98 @@ export default function CreateStreamModal({
           depositWalletAddress: receiver.address,
           amount: parseFloat(receiver.amount),
         };
-
-        // Send to parent component
         onCreateStream(newStream);
-      }
+        setMessage({
+          type: "success",
+          text: `Receiver addedd successfully! Transaction: ${addReceiverResult.transactionHash}`,
+        });
+      } else {
+        // Prepare escrow data for onchain creation
+        const receivers = formData.receivers.map(
+          (r) => r.address as `0x${string}`,
+        );
+        const amounts = formData.receivers.map((r) =>
+          parseTokenAmount(r.amount, formData.token === "USDC" ? 6 : 2),
+        );
+        const totalAmount = amounts.reduce(
+          (acc, amount) => acc + amount,
+          BigInt(0),
+        );
 
-      setMessage({
-        type: "success",
-        text: `Escrow created successfully onchain! Transaction: ${escrowResult.transactionHash}`,
-      });
+        // Debug logging
+        console.log("Escrow data prepared:", {
+          receivers,
+          amounts: amounts.map((a) => a.toString()),
+          totalAmount: totalAmount.toString(),
+          tokenType: formData.token,
+        });
+
+        // Create escrow onchain first
+        const escrowResult = await createEscrowOnchain(
+          walletClient,
+          formData.token,
+          {
+            receivers,
+            amounts,
+            totalAmount,
+          },
+        );
+
+        if (!escrowResult.success) {
+          throw new Error(
+            escrowResult.error || "Failed to create escrow onchain",
+          );
+        }
+        const escrowData = {
+          groupId: groupId,
+          escrowId: escrowResult.escrowId ?? "",
+          tokenType: formData.token,
+          senderAddress: walletClient.account.address,
+          totalAmount: totalAmount.toString(),
+          receivers: formData.receivers.map((r) => ({
+            address: r.address,
+            fullname: r.fullname,
+            amount: r.amount,
+          })),
+          transactionHash: escrowResult.transactionHash ?? "",
+          status: "active",
+          createdAt: new Date().toISOString(),
+        };
+
+        // Save escrow data to database to link escrowId with groupId
+        await saveEscrowToDatabase(escrowData);
+
+        // If escrow created successfully onchain, save to backend
+        for (const receiver of formData.receivers) {
+          await addReceiverToGroup(
+            user._id,
+            formData.token,
+            formData.token === "USDC" ? "💵" : "🔗",
+            groupId,
+            receiver.address,
+            receiver.amount,
+          );
+
+          const newStream: ReceiverInGroup = {
+            _id:
+              Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            groupId,
+            originCurrency: formData.token,
+            fullname: receiver.fullname,
+            tokenIcon: formData.token === "USDC" ? "💵" : "🔗",
+            depositWalletAddress: receiver.address,
+            amount: parseFloat(receiver.amount),
+          };
+
+          // Send to parent component
+          onCreateStream(newStream);
+        }
+
+        setMessage({
+          type: "success",
+          text: `Escrow created successfully onchain! Transaction: ${escrowResult.transactionHash}`,
+        });
+      }
 
       // Close modal after a delay to show success message
       setTimeout(() => {
@@ -278,31 +359,34 @@ export default function CreateStreamModal({
         <div className="flex-1 overflow-y-auto p-6">
           <div className="space-y-6">
             {/* Token Selection */}
-            <div>
-              <label className="text-white/80 text-sm mb-3 block font-medium">
-                Select Token for Escrow
-              </label>
-              <select
-                value={formData.token || ""}
-                onChange={(e) =>
-                  handleTokenSelect(e.target.value as "USDC" | "IDRX")
-                }
-                className="w-full p-4 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all"
-              >
-                <option value="" disabled>
-                  Choose a token
-                </option>
-                {AVAILABLE_TOKENS.map((token) => (
-                  <option
-                    key={token.symbol}
-                    value={token.symbol}
-                    className="bg-gray-800 text-white"
-                  >
-                    {token.symbol} - {token.description}
+            {!isAddReceiverMode && (
+              <div>
+                <label className="text-white/80 text-sm mb-3 block font-medium">
+                  Select Token for Escrow
+                </label>
+                <select
+                  value={formData.token || ""}
+                  onChange={(e) =>
+                    handleTokenSelect(e.target.value as "USDC" | "IDRX")
+                  }
+                  className="w-full p-4 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all"
+                >
+                  <option value="" disabled>
+                    Choose a token
                   </option>
-                ))}
-              </select>
-
+                  {AVAILABLE_TOKENS.map((token) => (
+                    <option
+                      key={token.symbol}
+                      value={token.symbol}
+                      className="bg-gray-800 text-white"
+                    >
+                      {token.symbol} - {token.description}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div>
               {/* Selected Token Display */}
               {formData.token && (
                 <div className="mt-3 p-3 bg-cyan-500/10 border border-cyan-500/20 rounded-lg">
@@ -323,14 +407,16 @@ export default function CreateStreamModal({
                 <label className="text-white/80 text-sm font-medium">
                   Receivers
                 </label>
-                <button
-                  type="button"
-                  onClick={addReceiver}
-                  className="flex items-center space-x-2 px-3 py-1 bg-cyan-500/20 border border-cyan-500/30 rounded-lg text-cyan-300 hover:bg-cyan-500/30 transition-colors text-sm"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Add Receiver</span>
-                </button>
+                {!isAddReceiverMode && (
+                  <button
+                    type="button"
+                    onClick={addNewReceiver}
+                    className="flex items-center space-x-2 px-3 py-1 bg-cyan-500/20 border border-cyan-500/30 rounded-lg text-cyan-300 hover:bg-cyan-500/30 transition-colors text-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add Receiver</span>
+                  </button>
+                )}
               </div>
 
               <div className="space-y-3">
@@ -374,7 +460,7 @@ export default function CreateStreamModal({
                         className="w-full p-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 text-sm"
                       />
                     </div>
-                    {formData.receivers.length > 1 && (
+                    {!isAddReceiverMode && formData.receivers.length > 1 && (
                       <button
                         type="button"
                         onClick={() => removeReceiver(receiver.id)}

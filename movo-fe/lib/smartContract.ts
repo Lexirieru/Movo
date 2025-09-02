@@ -109,6 +109,12 @@ export interface EscrowInfo {
   totalReceivers: number;
 }
 
+export interface AddReceiverResult{
+  success: boolean
+  transactionHash?: string
+  error?: string
+}
+
 // Utility functions
 export const generateEscrowId = (sender: string, timestamp: number): string => {
   return `escrow_${sender}_${timestamp}`;
@@ -286,6 +292,56 @@ export const createEscrowOnchain = async (
     };
   }
 };
+
+export async function addReceiver(
+  walletClient: any,
+  tokenType: "USDC" | "IDRX",
+  escrowId: string,
+  receiverAddress: `0x${string}`,
+  amount: bigint
+): Promise<AddReceiverResult>{
+  try{
+    console.log("Adding receiver to escrow:", {
+      tokenType,
+      escrowId,
+      receiverAddress,
+      amount: amount.toString(),
+    })
+
+    const contractAddress = tokenType == "USDC" 
+      ? escrowUsdcContract : escrowIdrxContract
+    
+    const txHash = await walletClient.writeContract({
+      address: contractAddress,
+      abi: escrowUsdcAbi || escrowIdrxAbi,
+      functionName: "addReceiver",
+      args: [escrowId, receiverAddress, amount],
+    })
+
+      console.log("Add receiver transaction sent: ", txHash)
+
+      const receipt = await walletClient.waitForTransactionReceipt(txHash)
+
+      if(receipt.status == "success"){
+        console.log("Receiver added successfully:", receipt)
+        return{
+          success: true,
+          transactionHash: txHash
+        }
+      }else{
+        return{
+          success: false,
+          error: "Transaction failed",
+        }
+      }
+  } catch (error){
+    console.error("Error adding receiver to escrow:", error)
+    return{
+      success: false,
+      error: error instanceof Error? error.message: "Unknown error occured",
+    }
+  }
+}
 
 // Topup funds to escrow
 export const topUpFunds = async (

@@ -47,6 +47,11 @@ export default function SenderDashboard({
   const [editAmount, setEditAmount] = useState<string>("");
   const [refreshFlag, setRefreshFlag] = useState(0); // 🔑 trigger ulang useEffect
 
+  const [existingEscrow, setExistingEscrow] = useState<{
+    escrowId: string;
+    tokenType: "USDC" | "IDRX";
+  } | null>(null);
+
   const [filterType, setFilterType] = useState<"all" | "pending" | "completed">(
     "all",
   );
@@ -80,6 +85,18 @@ export default function SenderDashboard({
         );
 
         setStreams(mappedStreams);
+
+        //nanti ambil escrowId disini
+        // if (mappedStreams.length > 0) {
+        //   const firstStream = mappedStreams[0];
+        //   setExistingEscrow({
+        //     escrowId: group.escrowId || "ESCROW_ID",
+        //     tokenType: firstStream.token as "USDC" | "IDRX",
+        //   });
+        // } else {
+        //   setExistingEscrow(null);
+        // }
+
         setHasFetched(true);
       } catch (err) {
         console.error("Failed to fetch specified group streams", err);
@@ -195,11 +212,27 @@ export default function SenderDashboard({
             className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg hover:shadow-cyan-500/25 transition-all duration-300 flex items-center space-x-2 hover:scale-105"
           >
             <Plus className="w-5 h-5" />
-            <span>
-              {filteredStreams.length === 0 ? "Create Escrow" : "Add Escrow"}
-            </span>
+            <span>{existingEscrow ? "Add Receiver" : "Create Escrow"}</span>
           </button>
         </div>
+
+        {existingEscrow && (
+          <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-xl p-4">
+            <div className="flex items-center space-x-3">
+              <div className="text-2xl">
+                {existingEscrow.tokenType === "USDC" ? "💵" : "🔗"}
+              </div>
+              <div>
+                <p className="text-cyan-300 font-medium">
+                  Active Escrow: {existingEscrow.tokenType}
+                </p>
+                <p className="text-cyan-400/80 text-sm">
+                  ID: {existingEscrow.escrowId}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -453,6 +486,7 @@ export default function SenderDashboard({
       <CreateStreamModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
+        existingEscrow={existingEscrow || undefined}
         onCreateStream={(newReceiver) => {
           const mapped: Stream = {
             _id: newReceiver._id,
