@@ -18,6 +18,7 @@ import {
   changeBankAccount,
   getBankAccount,
   getBankAccountFromDatabase,
+  getUsdcIdrxRate,
 } from "@/app/api/api";
 import { BankAccountInformation } from "@/types/receiverInGroupTemplate";
 
@@ -61,6 +62,21 @@ export default function BankForm({
   const [hasFetched, setHasFetched] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
   const [isConfirming, setIsConfirming] = useState(false);
+
+  const [rate, setRate] = useState<number | null>(null);
+
+  useEffect(() => {
+    const fetchRate = async () => {
+      try {
+        const res = await getUsdcIdrxRate();
+        setRate(res?.rate ?? null);
+      } catch (err) {
+        console.error("Failed to fetch rate", err);
+      }
+    };
+
+    fetchRate();
+  }, []);
 
   // State untuk saved bank accounts dan Add Bank popup
   const [savedBankAccounts, setSavedBankAccounts] = useState<
@@ -453,7 +469,9 @@ export default function BankForm({
             <div className="flex justify-between">
               <span className="text-white/70">Claim Amount:</span>
               <span className="text-white font-medium">
-                {(claimAmount * 15850).toLocaleString("id-ID")} IDR
+                {rate
+                  ? `Rp ${(netAmount * rate - 5000).toLocaleString("id-ID")}`
+                  : "Loading..."}
               </span>
             </div>
 
@@ -467,7 +485,9 @@ export default function BankForm({
                 </p>
               </div>
               <span className="text-red-400 font-medium">
-                -{(protocolFee * 15850).toLocaleString("id-ID")} IDR
+                {rate
+                  ? `-${(protocolFee * rate).toLocaleString("id-ID")} IDR`
+                  : "Loading..."}
               </span>
             </div>
 
@@ -487,16 +507,20 @@ export default function BankForm({
               <div className="flex justify-between items-end font-medium">
                 <span className="text-white">You&apos;ll receive:</span>
                 <div className="text-right">
-                  <div className="text-green-400 text-lg">
-                    Rp {(netAmount * 15850 - 5000).toLocaleString("id-ID")}
-                  </div>
-                  <div className="text-green-300 text-xs mt-0.5">
-                    ≈{" "}
-                    {((netAmount * 15850 - 5000) / 15850).toLocaleString(
-                      "id-ID",
-                    )}{" "}
-                    USDC
-                  </div>
+                  {rate && (
+                    <>
+                      <div className="text-green-400 text-lg">
+                        Rp {(netAmount * rate - 5000).toLocaleString("id-ID")}
+                      </div>
+                      <div className="text-green-300 text-xs mt-0.5">
+                        ≈{" "}
+                        {((netAmount * rate - 5000) / rate).toLocaleString(
+                          "id-ID",
+                        )}{" "}
+                        USDC
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
