@@ -20,7 +20,6 @@ const UserDataSchema = new Schema(
     hashedPassword: {
       type: String,
       required: true,
-      unique: true,
     },
     fullname: {
       type: String,
@@ -102,7 +101,6 @@ const GroupOfUserSchema = new Schema(
     escrowId: {
       type: String,
       required: false,
-      unique: true,
     },
     groupId: {
       type: String,
