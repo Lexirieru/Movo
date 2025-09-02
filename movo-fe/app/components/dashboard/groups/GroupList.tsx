@@ -8,7 +8,7 @@ interface GroupListProps {
   groups: GroupOfUser[];
   onGroupSelect?: (groupId: string) => void;
   isLoading: boolean;
-  onGroupDeleted?: () => void; // <-- baru
+  onGroupDeleted?: () => void;
 }
 
 // --- Helper Functions (bisa dipindah ke file utils jika perlu) ---
@@ -16,7 +16,7 @@ const getTotalAmount = (
   receivers: ReceiverInGroup[] | undefined | null,
 ): number => {
   if (!Array.isArray(receivers)) return 0;
-  return receivers.reduce((acc, r) => acc + (r.amount || 0), 0);
+  return receivers.reduce((acc, r) => acc + (Number(r.amount) || 0), 0);
 };
 
 const formatDate = (date?: Date | string | null): string => {
@@ -31,12 +31,6 @@ const formatDate = (date?: Date | string | null): string => {
 };
 
 // --- Komponen Utama ---
-interface GroupListProps {
-  groups: GroupOfUser[];
-  onGroupSelect?: (groupId: string) => void;
-  isLoading: boolean;
-}
-
 export default function GroupList({
   groups,
   onGroupSelect,

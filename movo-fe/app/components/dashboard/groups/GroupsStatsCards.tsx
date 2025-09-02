@@ -8,13 +8,18 @@ interface GroupStatsCardsProps {
 
 const getTotalAmount = (receivers: ReceiverInGroup[] | undefined | null): number => {
   if (!Array.isArray(receivers)) return 0;
-  return receivers.reduce((acc, r) => acc + (r.amount || 0), 0);
+  return receivers.reduce((acc, r) => acc + (Number(r.amount) || 0), 0);
 };
 
 export default function GroupStatsCards({ groups }: GroupStatsCardsProps) {
   const totalGroups = groups.length;
   const totalRecipients = groups.reduce((acc, g) => acc + (g.Receivers?.length || 0), 0);
   const totalAmount = groups.reduce((acc, g) => acc + getTotalAmount(g.Receivers), 0);
+
+  // Ensure totalAmount is a number and handle edge cases
+  const formattedAmount = typeof totalAmount === 'number' && !isNaN(totalAmount) 
+    ? totalAmount.toFixed(2) 
+    : '0.00';
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -45,7 +50,7 @@ export default function GroupStatsCards({ groups }: GroupStatsCardsProps) {
         <div className="flex items-center space-x-3">
           <CheckCircle2 className="w-8 h-8 text-purple-400" />
           <div>
-            <div className="text-2xl font-bold text-white">{totalAmount.toFixed(2)}</div>
+            <div className="text-2xl font-bold text-white">{formattedAmount}</div>
             <div className="text-white/60 text-sm">Total USDC</div>
           </div>
         </div>

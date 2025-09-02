@@ -132,6 +132,8 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
         address depositWallet
     );
     
+
+    
     // ============ MODIFIERS ============
     
     modifier onlyEscrowSender(bytes32 _escrowId) {
@@ -514,23 +516,32 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
         // Backend provides hashedAccountNumber for IDRX.co processing
         IIDRX idrx = IIDRX(IDRX_ADDRESS);
         idrx.burnWithAccountNumber(
-            netAmount,               // Amount to burn = after fee deduction
+            netAmount,               // Burn net amount (after fee deduction)
             _hashedAccountNumber     // Hash from backend
         );
         
         // STEP 2: Frontend must now call IDRX API to complete fiat withdrawal
         // API endpoint: POST /api/transaction/redeem-request
         // Required params: txHash (from this transaction), amount, bank details
-        // Note: IDRX.burnWithAccountNumber() called with correct parameters:
-        // - amount: _amount (IDRX amount to burn)
+        // Note: IDRX.burnWithAccountNumber() called with net amount:
+        // - amount: netAmount (amount after fee deduction)
         // - accountNumber: _hashedAccountNumber (hash from backend)
         // User address (_user) is automatically determined by IDRX contract
         
-        // Transfer fee to platform (fee taken from escrow balance)
+        // IMPORTANT: Burn netAmount so backend gets correct information
+        // Fee is handled by reducing escrow balance (no separate transfer needed)
+        // Events emitted (like mainnet):
+        // 1. Transfer to 0x0000... (burn) - netAmount
+        // 2. BurnWithAccountNumber - netAmount (correct for backend)
+        
+        // Transfer fee to platform (feeRecipient)
         if (fee > 0) {
             IERC20 idrxERC20 = IERC20(IDRX_ADDRESS);
             require(idrxERC20.transfer(feeRecipient, fee), "Fee transfer failed");
         }
+        
+        // Note: Fee transfer doesn't add extra events to logs
+        // Only 2 events from IDRX token burn (like mainnet)
         
 
     }

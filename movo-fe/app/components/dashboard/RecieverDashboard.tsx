@@ -113,6 +113,17 @@ export default function ReceiverDashboard({ onDropdownOpen }: ReceiverDashboardP
   const pendingCount = withdrawHistory.filter(w => !w.withdrawId).length;
   const completedCount = withdrawHistory.filter(w => w.withdrawId).length;
 
+  // Calculate total amount safely
+  const totalAmount = withdrawHistory.reduce((acc, w) => acc + Number(w.amount), 0);
+  const formattedTotalAmount = typeof totalAmount === 'number' && !isNaN(totalAmount) 
+    ? totalAmount.toFixed(2) 
+    : '0.00';
+
+  // Format total selected amount safely
+  const formattedSelectedAmount = typeof totalSelectedAmount === 'number' && !isNaN(totalSelectedAmount) 
+    ? totalSelectedAmount.toFixed(4) 
+    : '0.0000';
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black">
       <div className="container mx-auto p-6 space-y-6">
@@ -165,7 +176,7 @@ export default function ReceiverDashboard({ onDropdownOpen }: ReceiverDashboardP
               <Wallet className="w-8 h-8 text-cyan-400" />
               <div>
                 <div className="text-2xl font-bold text-white">
-                  {withdrawHistory.reduce((acc, w) => acc + Number(w.amount), 0).toFixed(2)}
+                  {formattedTotalAmount}
                 </div>
                 <div className="text-white/60 text-sm">Total USDC</div>
               </div>
@@ -399,7 +410,7 @@ export default function ReceiverDashboard({ onDropdownOpen }: ReceiverDashboardP
                 <span className="text-white/60 ml-1">selected</span>
               </div>
               <div className="text-white">
-                <span className="font-medium">{totalSelectedAmount.toFixed(4)}</span>
+                <span className="font-medium">{formattedSelectedAmount}</span>
                 <span className="text-white/60 ml-1">USDC</span>
               </div>
               <button
