@@ -6,7 +6,6 @@ import { useAuth } from "@/lib/userContext";
 import { addReceiverToGroup } from "@/app/api/api";
 import { useParams, useRouter } from "next/navigation";
 
-
 interface CreateStreamModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -26,29 +25,29 @@ const AVAILABLE_TOKENS: Token[] = [
     symbol: "ETH",
     name: "Ethereum",
     icon: "⟐",
-    balance: 2.5
+    balance: 2.5,
   },
   {
     address: "0xA0b8...1234",
     symbol: "USDC",
     name: "USD Coin",
     icon: "💵",
-    balance: 1000
+    balance: 1000,
   },
   {
     address: "0x5678...9ABC",
     symbol: "DAI",
     name: "Dai Stablecoin",
     icon: "◈",
-    balance: 500
+    balance: 500,
   },
   {
     address: "0x9ABC...DEF0",
     symbol: "USDT",
     name: "Tether USD",
     icon: "₮",
-    balance: 750
-  }
+    balance: 750,
+  },
 ];
 
 export default function CreateStreamModal({
@@ -59,7 +58,7 @@ export default function CreateStreamModal({
   const router = useRouter();
   const params = useParams();
   const groupId = params.groupId as string; // 👉 "group_1756722469592_8hvygor92"
-  const { user, loading, authenticated } = useAuth(); 
+  const { user, loading, authenticated } = useAuth();
   const [step, setStep] = useState(1); // 1: form, 2: token search
   const [formData, setFormData] = useState<FormData>({
     token: null,
@@ -74,10 +73,10 @@ export default function CreateStreamModal({
     if (query.trim()) {
       // Filter tokens berdasarkan address, symbol, atau name
       const filtered = AVAILABLE_TOKENS.filter(
-        token =>
+        (token) =>
           token.name.toLowerCase().includes(query.toLowerCase()) ||
           token.symbol.toLowerCase().includes(query.toLowerCase()) ||
-          token.name.toLowerCase().includes(query.toLowerCase())
+          token.name.toLowerCase().includes(query.toLowerCase()),
       );
       setSearchResults(filtered);
     } else {
@@ -103,15 +102,13 @@ export default function CreateStreamModal({
         formData.token.icon,
         groupId,
         formData.receiverAddress,
-        formData.amount
+        formData.amount,
       );
-      console.log(addUser)
-      // ⬇️ Buat objek ReceiverInGroup lokal dari response / form
       const newStream: ReceiverInGroup = {
-        _id: addUser.insertedId || Date.now().toString(), // fallback kalau backend gak return id
+        _id: Date.now().toString(), // fallback kalau backend gak return id
         groupId,
         originCurrency: formData.token.name,
-        fullname : addUser.fullname,
+        fullname: addUser.data,
         tokenIcon: formData.token.icon,
         depositWalletAddress: formData.receiverAddress,
         amount: parseFloat(formData.amount),
@@ -119,7 +116,6 @@ export default function CreateStreamModal({
 
       // 🔑 Kirim ke parent biar SenderDashboard update state tanpa fetch ulang
       onCreateStream(newStream);
-
     } catch (e) {
       console.log(e);
       return;
@@ -128,7 +124,6 @@ export default function CreateStreamModal({
     onClose();
     resetForm();
   };
-
 
   const resetForm = () => {
     setFormData({
@@ -200,7 +195,9 @@ export default function CreateStreamModal({
                   >
                     <span className="text-3xl">{token.icon}</span>
                     <div className="flex-1">
-                      <div className="text-white font-medium">{token.symbol}</div>
+                      <div className="text-white font-medium">
+                        {token.symbol}
+                      </div>
                       <div className="text-gray-400 text-sm">{token.name}</div>
                       <div className="text-gray-500 text-xs font-mono">
                         {token.address}
@@ -224,7 +221,9 @@ export default function CreateStreamModal({
       {step === 1 && (
         <div className="fixed inset-0 bg-gradient-to-br from-black via-gray-900 to-black z-40 flex flex-col">
           <div className="flex justify-between items-center p-6 border-b border-white/10">
-            <h3 className="text-white text-xl font-semibold">Create a Stream</h3>
+            <h3 className="text-white text-xl font-semibold">
+              Create a Stream
+            </h3>
             <button
               onClick={handleClose}
               className="text-gray-400 hover:text-white transition-colors"
@@ -257,7 +256,9 @@ export default function CreateStreamModal({
                       </div>
                     </div>
                   ) : (
-                    <span className="text-gray-400">Search and select a token</span>
+                    <span className="text-gray-400">
+                      Search and select a token
+                    </span>
                   )}
                   <Search className="w-5 h-5 text-gray-400" />
                 </button>
@@ -328,7 +329,8 @@ export default function CreateStreamModal({
                     !formData.token ||
                     !formData.receiverAddress ||
                     !formData.amount ||
-                    (formData.token && parseFloat(formData.amount) > formData.token.balance)
+                    (formData.token &&
+                      parseFloat(formData.amount) > formData.token.balance)
                   }
                   className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-600 text-white py-3 rounded-xl hover:from-cyan-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 disabled:hover:scale-100"
                 >

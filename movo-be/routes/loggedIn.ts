@@ -1,8 +1,28 @@
-import { addBankAccount, changeBankAccount, deleteBankAccount, getBankAccount, getBankAccountFromDatabase, getOrganizationMembers, onBoardingUser} from "../controllers/userGeneralController";
+import {
+  addBankAccount,
+  changeBankAccount,
+  deleteBankAccount,
+  getBankAccount,
+  getBankAccountFromDatabase,
+  getOrganizationMembers,
+  onBoardingUser,
+} from "../controllers/userGeneralController";
 
 import express, { RequestHandler } from "express";
-import { addGroup, addReceiverToGroup, deleteGroup, loadAllGroup, loadAllGroupTransactionHistory, loadSpecifiedGroup, removeReceiverDataFromGroup } from "../controllers/userSenderController";
-import { loadAllWithdrawHistory, loadSpecificGroupInformation } from "../controllers/userReceiverController";
+import {
+  addGroup,
+  addReceiverToGroup,
+  deleteGroup,
+  editReceiverAmountInGroup,
+  loadAllGroup,
+  loadAllGroupTransactionHistory,
+  loadSpecifiedGroup,
+  removeReceiverDataFromGroup,
+} from "../controllers/userSenderController";
+import {
+  loadAllWithdrawHistory,
+  loadSpecificGroupInformation,
+} from "../controllers/userReceiverController";
 
 const router = express.Router();
 
@@ -15,7 +35,7 @@ type RouteDefinition = {
 };
 
 const routes: RouteDefinition[] = [
-  // userGeneralController 
+  // userGeneralController
   {
     method: "post",
     path: "/onBoardingUser",
@@ -26,7 +46,7 @@ const routes: RouteDefinition[] = [
     path: "/getOrganizationMembers",
     action: getOrganizationMembers,
   },
-  
+
   {
     method: "post",
     path: "/addBankAccount",
@@ -83,6 +103,11 @@ const routes: RouteDefinition[] = [
     method: "post",
     path: "/deleteGroup",
     action: deleteGroup,
+  },
+  {
+    method: "post",
+    path: "/editReceiverAmountInGroup",
+    action: editReceiverAmountInGroup,
   },
   {
     method: "post",

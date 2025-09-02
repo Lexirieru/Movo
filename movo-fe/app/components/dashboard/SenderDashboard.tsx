@@ -10,7 +10,11 @@ import {
   Filter,
 } from "lucide-react";
 import { useAuth } from "@/lib/userContext";
-import { loadSpecifiedGroup, removeReceiverDataFromGroup } from "@/app/api/api";
+import {
+  editReceiverAmountInGroup,
+  loadSpecifiedGroup,
+  removeReceiverDataFromGroup,
+} from "@/app/api/api";
 import { GroupOfUser, ReceiverInGroup } from "@/types/receiverInGroupTemplate";
 import CreateStreamModal from "./sender/CreateStreamModal";
 import { Trash2, Edit, RotateCcw, X } from "lucide-react";
@@ -114,8 +118,7 @@ export default function SenderDashboard({
         receiverId,
       );
       console.log(groupDeleted);
-      // Panggil callback setelah sukses delete
-      // if (onGroupDeleted) onGroupDeleted();
+      setStreams((prev) => prev.filter((s) => s._id !== receiverId));
     } catch (err) {
       console.log(err);
       return;
@@ -138,19 +141,24 @@ export default function SenderDashboard({
 
     return matchesSearch && matchesFilter;
   });
-  const handleSaveAmount = async (id: string) => {
+  const handleSaveAmount = async (receiverId: string, amount: string) => {
     try {
       // update local state dulu
       setStreams((prev) =>
         prev.map((stream) =>
-          stream._id === id
+          stream._id === receiverId
             ? { ...stream, totalAmount: parseFloat(editAmount) }
             : stream,
         ),
       );
-
-      // TODO: update ke backend (misal panggil API updateReceiverAmount)
-      // await updateReceiverAmount(user._id, groupId, id, parseFloat(editAmount));
+      console.log(user);
+      const amountEdited = await editReceiverAmountInGroup(
+        user._id,
+        groupId,
+        receiverId,
+        amount,
+      );
+      console.log(amountEdited);
 
       setEditingId(null);
       setEditAmount("");
@@ -291,7 +299,7 @@ export default function SenderDashboard({
                   {editingId === s._id ? (
                     <>
                       <button
-                        onClick={() => handleSaveAmount(s._id)}
+                        onClick={() => handleSaveAmount(s._id, editAmount)}
                         className="bg-green-500 hover:bg-green-600 text-white flex items-center justify-center rounded-lg aspect-square w-10 h-10"
                       >
                         <Edit className="w-5 h-5" />
@@ -387,7 +395,7 @@ export default function SenderDashboard({
                       {editingId === s._id ? (
                         <>
                           <button
-                            onClick={() => handleSaveAmount(s._id)}
+                            onClick={() => handleSaveAmount(s._id, editAmount)}
                             className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg aspect-square text-sm font-medium"
                           >
                             <Edit className="w-4 h-4" /> {/* Edit */}
@@ -452,6 +460,7 @@ export default function SenderDashboard({
                 : newReceiver.originCurrency,
             tokenIcon: newReceiver.tokenIcon || "💰",
             recipient: newReceiver.depositWalletAddress,
+            fullname: newReceiver.fullname,
             totalAmount: newReceiver.amount,
             totalSent: 0,
           };
