@@ -1,7 +1,10 @@
 import { ethers } from "ethers";
 import payrollAbi from "../abi/payrollABI.json";
 import dotenv from "dotenv";
-import { TransactionHistoryModel } from "../models/transactionRecordModel";
+import {
+  TransactionHistoryModel,
+  WithdrawHistoryModel,
+} from "../models/transactionRecordModel";
 import { GroupOfUserModel, UserModel } from "../models/userModel";
 import escrowABI from "../abi/escrowABI.json";
 
@@ -23,7 +26,6 @@ export const senderListener = async () => {
     escrowABI,
     provider
   );
-
   contract.on(
     "EscrowCreated",
     async (
@@ -46,27 +48,59 @@ export const senderListener = async () => {
         amounts.map((a: any) => a.toString())
       );
       console.log("Block:", event.blockNumber);
+
+      // cari user sender
       const userData = await UserModel.findOne({ walletAddress: sender });
       if (!userData) {
         console.log("User data not found!");
         return;
       }
+
+      // update group dengan escrowId terbaru
       const addEscrowId = await GroupOfUserModel.findOneAndUpdate(
-        { senderId: userData._id }, // filter by sender
-        { $set: { escrowId } }, // set escrowId
-        { new: true, sort: { createdAt: -1 } } // pilih group terbaru
+        { senderId: userData._id },
+        { $set: { escrowId } },
+        { new: true, sort: { createdAt: -1 } }
       );
+
       if (addEscrowId) {
         console.log("EscrowId berhasil ditambahkan ke group:", addEscrowId._id);
       } else {
         console.log("Failed to fetch escrow ID");
       }
+
+      // loop setiap receiver dan amount pasangannya
+      for (let i = 0; i < receivers.length; i++) {
+        const receiverAddress = receivers[i];
+        const amount = amounts[i];
+
+        const receiverData = await UserModel.findOne({
+          walletAddress: receiverAddress,
+        });
+
+        if (!receiverData) {
+          console.log(`Receiver ${receiverAddress} not found in DB`);
+          continue;
+        }
+
+        const addWithdrawHistoryToReceiver = new WithdrawHistoryModel({
+          receiverId: receiverData._id,
+          amount: amount.toString(),
+          originCurrency: "USDC",
+          escrowId: escrowId, // optional: simpan escrowId biar traceable
+        });
+
+        await addWithdrawHistoryToReceiver.save();
+        console.log(
+          `Withdraw history ditambahkan utk receiver ${receiverAddress}, amount: ${amount.toString()}`
+        );
+      }
     }
   );
 
-  // // 👂 Listener event sc (send transfer transaction dari wallet sender ke wallet escrow)
+  // 👂 Listener event sc waktu sender top up fund ke escrow
   // contract.on(
-  //   "PayrollApproved",
+  //   "TopUpFunds",
   //   async (
   //     txId: string,
   //     senderId: string,
@@ -80,86 +114,7 @@ export const senderListener = async () => {
   //     originCurrency,
   //     event
   //   ) => {
-  //     console.log("📡 Event PayrollApproved detected:");
-  //     console.log("txId:", txId);
-  //     console.log("Tx Hash:", event.transactionHash);
-  //     console.log("Sender:", senderName);
-  //     console.log("Total Receiver:", totalReceiver);
-  //     console.log("Amount:", totalAmount);
-  //     try {
-  //       // ambil data transaksi untuk signature
-  //       const tx = await provider.getTransaction(event.transactionHash);
-  //       if (!tx) throw new Error("Transaction not found");
-
-  //       const timestamp = (await provider.getBlock(tx.blockNumber!)).timestamp
-  //         .toString;
-  //       const receipt = await provider.getTransactionReceipt(
-  //         event.transactionHash
-  //       );
-
-  //       // addTransactionHistory (biar gampang di searchnya wakkwak)
-  //       const transactionHistory = new TransactionHistoryModel({
-  //         txId,
-  //         senderId,
-  //         originCurrency,
-  //         senderName,
-  //         receiverName,
-  //         groupId,
-  //         groupName,
-  //         totalAmount,
-  //         Receivers: Receivers.map((receiverStr) => {
-  //           const receiver = JSON.parse(receiverStr);
-  //           return {
-  //             email: receiver.email,
-  //             fullname: receiver.fullname,
-  //             amount: receiver.amount,
-  //           };
-  //         }),
-  //         txHash: event.txHash,
-  //         blockNumber: tx.blockNumber?.toString(),
-  //         blockHash: receipt.blockHash,
-  //         from: tx.from,
-  //         to: tx.to,
-  //         gasUsed: receipt.gasUsed.toString(),
-  //         gasPrice: tx.gasPrice?.toString(),
-  //         totalReceiver: Receivers.length,
-  //         timestamp,
-  //       });
-  //       await transactionHistory.save();
-
-  //       // ngeupdate availableBalance di userModel dan groupOfUserModel di fieldnya masing masing receiver
-  //       for (const receiverStr of event.args.receivers as string[]) {
-  //         const receiver = JSON.parse(receiverStr);
-
-  //         // convert wei → ether number
-  //         const amount = Number(ethers.utils.formatEther(receiver.amount));
-
-  //         // update saldo di UserModel
-  //         await UserModel.findOneAndUpdate(
-  //           { email: receiver.email },
-  //           // inc untuk ngeadd, bukan ngeoverwrite
-  //           { $inc: { availableBalance: amount } },
-  //           { new: true }
-  //         );
-
-  //         // update saldo di GroupOfUserModel
-  //         await GroupOfUserModel.findOneAndUpdate(
-  //           {
-  //             groupId,
-  //             "Receivers.email": receiver.email,
-  //           },
-  //           // inc untuk ngeadd, bukan ngeoverwrite
-  //           { $inc: { "Receivers.$.availableBalance": amount } },
-  //           { new: true }
-  //         );
-
-  //         console.log(
-  //           `💰 Updated balance for ${receiver.email} (+${amount} ETH) in User & Group`
-  //         );
-  //       }
-  //     } catch (err) {
-  //       console.error("❌ Error handling PayrollApproved:", err);
-  //     }
+  //     const addTransactionHistoryToSender = new TransactionHistoryModel();
   //   }
   // );
 

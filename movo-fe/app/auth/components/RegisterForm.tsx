@@ -12,7 +12,7 @@ export default function RegisterForm() {
     name: "",
     email: "",
     password: "",
-    confirmPassword: ""
+    confirmPassword: "",
   });
   const [isLoading, setIsLoading] = useState(false);
 
@@ -23,11 +23,15 @@ export default function RegisterForm() {
   const handleSubmit = async () => {
     setIsLoading(true);
     // Simulate API call
-    const response = await register(formData.email, formData.name,  formData.password)
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    const response = await register(
+      formData.email,
+      formData.name,
+      formData.password,
+    );
+    await new Promise((resolve) => setTimeout(resolve, 2000));
     setIsLoading(false);
     console.log(response);
-    if(response.statusCode == 200){
+    if (response.data) {
       // kasih redirect ke halaman dashboard pengguna
       router.push("/addbankdata");
     }
@@ -77,8 +81,8 @@ export default function RegisterForm() {
         required
       />
 
-      <SubmitButton 
-        isLoading={isLoading} 
+      <SubmitButton
+        isLoading={isLoading}
         onClick={handleSubmit}
         text="Create Account"
       />
