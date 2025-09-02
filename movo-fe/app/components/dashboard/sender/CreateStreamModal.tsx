@@ -100,43 +100,8 @@ export default function CreateStreamModal({
   };
 
   const handleSubmit = async () => {
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-    if (!formData.token || !formData.receiverAddress || !formData.amount)
-      return;
-
-    try {
-      const addUser = await addReceiverToGroup(
-        user._id,
-        formData.token.name,
-        formData.token.icon,
-        groupId,
-        formData.receiverAddress,
-        formData.amount,
-      );
-
-      const newStream: ReceiverInGroup = {
-        _id: addUser.data._id,
-        groupId,
-        originCurrency: formData.token.name,
-        fullname: addUser.data.fullname,
-        tokenIcon: formData.token.icon,
-        depositWalletAddress: formData.receiverAddress,
-        amount: parseFloat(formData.amount),
-      };
-
-      // 🔑 Kirim ke parent biar SenderDashboard update state tanpa fetch ulang
-      onCreateStream(newStream);
-    } catch (e) {
-      console.log(e);
-=======
     if (!walletClient) {
       setMessage({ type: 'error', text: 'Wallet client not ready. Please try reconnecting your wallet.' });
->>>>>>> Stashed changes
-=======
-    if (!walletClient) {
-      setMessage({ type: 'error', text: 'Wallet client not ready. Please try reconnecting your wallet.' });
->>>>>>> Stashed changes
       return;
     }
 
@@ -205,7 +170,7 @@ export default function CreateStreamModal({
       };
 
       // Save escrow data to database to link escrowId with groupId
-      await saveEscrowToDatabase(escrowData);
+      // await saveEscrowToDatabase(escrowData);
 
       // If escrow created successfully onchain, save to backend
       for (const receiver of formData.receivers) {

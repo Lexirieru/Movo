@@ -12,15 +12,8 @@ interface GroupListProps {
   groups: GroupOfUser[];
   onGroupSelect?: (groupId: string) => void;
   isLoading: boolean;
-<<<<<<< Updated upstream
-  onGroupDeleted?: () => void; // <-- baru
-=======
   onGroupDeleted?: () => void;
   onTopupFund?: (groupId: string) => void;
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 }
 
 const getTotalAmount = (
@@ -140,6 +133,7 @@ export default function GroupList({
       onGroupSelect(groupId);
     }
   };
+  
   const handleDeleteGroup = async (groupId: string) => {
     // Tampilkan popup konfirmasi
     const confirmDelete = window.confirm(

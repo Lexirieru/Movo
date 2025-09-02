@@ -11,7 +11,7 @@ import SmartContractStatus from "./SmartContractStatus";
 import { X, Users, Plus } from "lucide-react";
 import CreateGroupModal from "./groups/CreateGroupModal";
 import TopupFundModal from "./groups/TopupFundModal";
-import { loadAllGroup } from "@/app/api/api";
+import { loadAllGroup, addGroup } from "@/app/api/api";
 
 interface GroupDashboardProps {
   onGroupSelect?: (groupId: string) => void;
@@ -62,13 +62,11 @@ export default function GroupDashboard({ onGroupSelect }: GroupDashboardProps) {
     setSelectedGroupId(groupId);
     setIsTopupModalOpen(true);
   };
-<<<<<<< Updated upstream
 
   const handleGroupSelect = (groupId: string) => {
     router.push(`/dashboard/sender/${groupId}`);
   };
 
-<<<<<<< Updated upstream
   const handleCreateGroup = async (groupData: { groupName: string }) => {
     try {
       if (!user._id && !user.email) {
@@ -144,91 +142,24 @@ export default function GroupDashboard({ onGroupSelect }: GroupDashboardProps) {
           groups={filteredGroups}
           onGroupSelect={handleGroupSelect}
           isLoading={!hasFetched && loading}
-          onGroupDeleted={handleGroupDeleted} // <-- tambahkan ini
+          onGroupDeleted={handleGroupDeleted}
+          onTopupFund={handleTopupFund}
         />
-=======
-  const handleCreateGroup = () => {
-    setIsCreateModalOpen(false);
-    setHasFetched(false);
-  };
 
-  return (
-    <div className="space-y-6">
-      {/* 1. Header & Stats */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Payment Groups</h1>
-          <p className="text-white/60">Manage your payment groups and escrow streams</p>
-        </div>
-=======
+        {/* Create Group Modal */}
+        <CreateGroupModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onCreateGroup={handleCreateGroup}
+        />
 
-  const handleGroupSelect = (groupId: string) => {
-    router.push(`/dashboard/sender/${groupId}`)
-  }
-
-  const handleCreateGroup = () => {
-    setIsCreateModalOpen(false);
-    setHasFetched(false);
-  };
-
-  return (
-    <div className="space-y-6">
-      {/* 1. Header & Stats */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Payment Groups</h1>
-          <p className="text-white/60">Manage your payment groups and escrow streams</p>
-        </div>
->>>>>>> Stashed changes
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg hover:shadow-cyan-500/25 transition-all duration-300 flex items-center space-x-2"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Create Group</span>
-        </button>
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
+        {/* Topup Fund Modal */}
+        <TopupFundModal
+          isOpen={isTopupModalOpen}
+          onClose={() => setIsTopupModalOpen(false)}
+          groupId={selectedGroupId || ""}
+        />
       </div>
-
-      {/* 2. Stats Cards & Filter */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <GroupStatsCards groups={groups} />
-        <div className="space-y-4">
-          <GroupFilterBar
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            filterType={filterType}
-            onFilterChange={setFilterType}
-          />
-          <SmartContractStatus />
-        </div>
-      </div>
-
-      {/* 3. Daftar Grup (Responsif) */}
-      <GroupList 
-        groups={filteredGroups} 
-        onGroupSelect={handleGroupSelect} 
-        isLoading={!hasFetched && loading}
-        onGroupDeleted={handleGroupDeleted}
-        onTopupFund={handleTopupFund}
-      />
-
-      {/* Create Group Modal */}
-      <CreateGroupModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onCreateGroup={handleCreateGroup}
-      />
-
-      {/* Topup Fund Modal */}
-      <TopupFundModal
-        isOpen={isTopupModalOpen}
-        onClose={() => setIsTopupModalOpen(false)}
-        groupId={selectedGroupId || ""}
-      />
     </div>
   );
 }
