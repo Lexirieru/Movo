@@ -24,14 +24,14 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
  * - Add/remove receivers dynamically
  * - Edit amounts for existing receivers
  * - Top-up funds to existing escrow
- * - Monthly/periodic payment cycles
+ * - Long-term payment management
  * - Crypto and fiat withdrawal options
  * 
  * USE CASE EXAMPLE:
  * - January: 5 receivers, 200 USDC each, total 1000 USDC
  * - February: Same 5 receivers, same amounts, top-up 1000 USDC
  * - March: Increase each receiver by 100 USDC (300 USDC each), top-up 1500 USDC
- * - Receiver bisa withdraw kapan saja sesuai alokasi (tidak ada batasan cycle)
+ * - Receiver can withdraw anytime according to allocation (no cycle restrictions)
  */
 contract EscrowUSDC is ReentrancyGuard, Ownable, Pausable {
     
@@ -49,7 +49,7 @@ contract EscrowUSDC is ReentrancyGuard, Ownable, Pausable {
         uint256 totalAllocatedAmount;     // Total amount allocated to all receivers
         uint256 totalDepositedAmount;     // Total amount deposited by sender
         uint256 totalWithdrawnAmount;     // Total amount withdrawn
-        uint256 availableBalance;         // Available balance for withdrawals (hanya dari topUpFunds)
+        uint256 availableBalance;         // Available balance for withdrawals (only from topUpFunds)
         bool isActive;
         uint256 createdAt;
         uint256 lastTopUpAt;             // Last time funds were added
@@ -90,30 +90,26 @@ contract EscrowUSDC is ReentrancyGuard, Ownable, Pausable {
         bytes32 indexed escrowId,
         address indexed sender,
         uint256 amount,
-        uint256 newCycleBalance,
-        uint256 cycleNumber
+        uint256 newCycleBalance
     );
     
     event ReceiverAdded(
         bytes32 indexed escrowId,
         address indexed receiver,
-        uint256 amount,
-        uint256 cycleNumber
+        uint256 amount
     );
     
     event ReceiverRemoved(
         bytes32 indexed escrowId,
         address indexed receiver,
-        uint256 refundAmount,
-        uint256 cycleNumber
+        uint256 refundAmount
     );
     
     event ReceiverAmountUpdated(
         bytes32 indexed escrowId,
         address indexed receiver,
         uint256 oldAmount,
-        uint256 newAmount,
-        uint256 cycleNumber
+        uint256 newAmount
     );
     
 
@@ -122,16 +118,14 @@ contract EscrowUSDC is ReentrancyGuard, Ownable, Pausable {
         bytes32 indexed escrowId,
         address indexed receiver,
         uint256 amount,
-        address depositWallet,
-        uint256 cycleNumber
+        address depositWallet
     );
     
     event USDCWithdrawnToFiat(
         bytes32 indexed escrowId,
         address indexed receiver,
         uint256 amount,
-        address depositWallet,
-        uint256 cycleNumber
+        address depositWallet
     );
     
     event EscrowPaused(
@@ -216,7 +210,7 @@ contract EscrowUSDC is ReentrancyGuard, Ownable, Pausable {
         EscrowRoom storage room = escrowRooms[escrowId];
         room.sender = msg.sender;
         room.totalAllocatedAmount = totalAmount;
-        room.availableBalance = 0;  // Mulai dari 0, tidak ada dana di escrow
+        room.availableBalance = 0;  // Start from 0, no funds in escrow
         room.isActive = true;
         room.createdAt = block.timestamp;
         room.lastTopUpAt = block.timestamp;
@@ -271,16 +265,16 @@ contract EscrowUSDC is ReentrancyGuard, Ownable, Pausable {
         require(usdc.transferFrom(msg.sender, address(this), _amount), "Transfer to escrow failed");
         
         room.totalDepositedAmount += _amount;
-        room.availableBalance += _amount;  // Balance tersedia untuk withdrawal
+        room.availableBalance += _amount;  // Balance available for withdrawal
         room.lastTopUpAt = block.timestamp;
         
-        emit FundsTopUp(_escrowId, msg.sender, _amount, room.availableBalance, 0);
+        emit FundsTopUp(_escrowId, msg.sender, _amount, room.availableBalance);
     }
     
 
     
     /**
-     * @dev Add new receiver to existing escrow - bebas tambah receiver tanpa perlu balance
+     * @dev Add new receiver to existing escrow - freely add receiver without balance requirement
      * @param _escrowId ID of escrow room
      * @param _receiver Address of new receiver
      * @param _amount Amount for new receiver (2-5000 USDC)
@@ -291,14 +285,14 @@ contract EscrowUSDC is ReentrancyGuard, Ownable, Pausable {
         uint256 _amount
     ) external nonReentrant whenNotPaused escrowExists(_escrowId) escrowActive(_escrowId) onlyEscrowSender(_escrowId) {
         require(_receiver != address(0), "Invalid receiver address");
-        // Validasi amount: minimal 2 USDC, maksimal 5000 USDC
+        // Amount validation: minimum 2 USDC, maximum 5000 USDC
         require(_amount >= 2 * 10**6, "Amount below minimum (2 USDC)");
         require(_amount <= 5000 * 10**6, "Amount above maximum (5000 USDC)");
         require(escrowRooms[_escrowId].receivers[_receiver].receiverAddress == address(0), "Receiver already exists");
         
         EscrowRoom storage room = escrowRooms[_escrowId];
         
-        // Tambah receiver tanpa perlu balance check
+        // Add receiver without balance check
         room.receivers[_receiver] = Receiver({
             receiverAddress: _receiver,
             currentAllocation: _amount,
@@ -309,15 +303,15 @@ contract EscrowUSDC is ReentrancyGuard, Ownable, Pausable {
         room.receiverAddresses.push(_receiver);
         room.activeReceiverCount++;
         room.totalAllocatedAmount += _amount;
-        // Tidak perlu kurangi availableBalance
+        // No need to reduce availableBalance
         
         receiverEscrows[_receiver].push(_escrowId);
         
-        emit ReceiverAdded(_escrowId, _receiver, _amount, 0);
+        emit ReceiverAdded(_escrowId, _receiver, _amount);
     }
     
     /**
-     * @dev Remove receiver from escrow - hapus receiver dari array dan mark inactive
+     * @dev Remove receiver from escrow - remove receiver from array and mark inactive
      * @param _escrowId ID of escrow room
      * @param _receiver Address of receiver to remove
      */
@@ -338,24 +332,27 @@ contract EscrowUSDC is ReentrancyGuard, Ownable, Pausable {
         room.activeReceiverCount--;
         room.totalAllocatedAmount -= remainingAllocation;
         
-        // Hapus address dari array receiverAddresses
+        // Remove address from receiverAddresses array
         for (uint256 i = 0; i < room.receiverAddresses.length; i++) {
             if (room.receiverAddresses[i] == _receiver) {
-                // Geser semua element setelah index i ke kiri
+                // Shift all elements after index i to the left
                 for (uint256 j = i; j < room.receiverAddresses.length - 1; j++) {
                     room.receiverAddresses[j] = room.receiverAddresses[j + 1];
                 }
-                // Hapus element terakhir
+                // Remove last element
                 room.receiverAddresses.pop();
                 break;
             }
         }
         
-        emit ReceiverRemoved(_escrowId, _receiver, remainingAllocation, 0);
+        // Reset receiver data so it can be added again
+        delete room.receivers[_receiver];
+        
+        emit ReceiverRemoved(_escrowId, _receiver, remainingAllocation);
     }
     
     /**
-     * @dev Update amount for existing receiver - bebas ubah amount tanpa perlu balance
+     * @dev Update amount for existing receiver - freely change amount without balance requirement
      * @param _escrowId ID of escrow room
      * @param _receiver Address of receiver
      * @param _newAmount New amount for receiver (2-5000 USDC)
@@ -365,7 +362,7 @@ contract EscrowUSDC is ReentrancyGuard, Ownable, Pausable {
         address _receiver,
         uint256 _newAmount
     ) external nonReentrant whenNotPaused escrowExists(_escrowId) escrowActive(_escrowId) onlyEscrowSender(_escrowId) {
-        // Validasi amount: minimal 2 USDC, maksimal 5000 USDC
+        // Amount validation: minimum 2 USDC, maximum 5000 USDC
         require(_newAmount >= 2 * 10**6, "Amount below minimum (2 USDC)");
         require(_newAmount <= 5000 * 10**6, "Amount above maximum (5000 USDC)");
         
@@ -377,11 +374,11 @@ contract EscrowUSDC is ReentrancyGuard, Ownable, Pausable {
         
         uint256 oldAmount = receiver.currentAllocation;
         
-        // Update amount tanpa perlu balance check
+        // Update amount without balance check
         room.totalAllocatedAmount = room.totalAllocatedAmount - oldAmount + _newAmount;
         receiver.currentAllocation = _newAmount;
         
-        emit ReceiverAmountUpdated(_escrowId, _receiver, oldAmount, _newAmount, 0);
+        emit ReceiverAmountUpdated(_escrowId, _receiver, oldAmount, _newAmount);
     }
     
     /**
@@ -418,7 +415,7 @@ contract EscrowUSDC is ReentrancyGuard, Ownable, Pausable {
             require(usdc.transfer(feeRecipient, fee), "Fee transfer failed");
         }
         
-        emit USDCWithdrawn(_escrowId, msg.sender, _amount, msg.sender, 0);
+        emit USDCWithdrawn(_escrowId, msg.sender, _amount, msg.sender);
     }
     
     /**
@@ -459,7 +456,7 @@ contract EscrowUSDC is ReentrancyGuard, Ownable, Pausable {
             require(usdc.transfer(feeRecipient, fee), "Fee transfer failed");
         }
         
-        emit USDCWithdrawnToFiat(_escrowId, msg.sender, _amount, _depositWallet, 0);
+        emit USDCWithdrawnToFiat(_escrowId, msg.sender, _amount, _depositWallet);
     }
     
     /**

@@ -18,21 +18,21 @@ import "./interfaces/IIDRX.sol";
 
 /**
  * @title EscrowIDRX
- * @dev Smart contract for IDRX escrow system with crypto and fiat withdrawal features
+ * @dev Smart contract for IDRX escrow system designed for long-term usage
  * 
- * ARCHITECTURE:
- * - Crypto Withdrawal: IDRX directly to receiver wallet
- * - Fiat Withdrawal: Smart contract burns IDRX, frontend handles redeem via IDRX API
+ * FEATURES:
+ * - Long-term escrow that can be reused for recurring payments
+ * - Add/remove receivers dynamically
+ * - Edit amounts for existing receivers
+ * - Top-up funds to existing escrow
+ * - Long-term payment management
+ * - Crypto and fiat withdrawal options
  * 
- * FLOW FOR FIAT WITHDRAWAL:
- * 1. User calls withdrawIDRXToFiat() with bank account number
- * 2. Smart contract burns IDRX via burnWithAccountNumber()
- * 3. Frontend gets transaction hash from burning
- * 4. Frontend calls IDRX API (/api/transaction/redeem-request) with tx hash
- * 5. IDRX.co processes fiat withdrawal to bank account
- * 
- * Note: This contract only handles the burning part. Frontend must integrate with IDRX API
- * for complete fiat withdrawal functionality.
+ * USE CASE EXAMPLE:
+ * - January: 5 receivers, 200 IDRX each, total 1000 IDRX
+ * - February: Same 5 receivers, same amounts, top-up 1000 IDRX
+ * - March: Increase each receiver by 100 IDRX (300 IDRX each), top-up 1500 IDRX
+ * - Receiver can withdraw anytime according to allocation (no cycle restrictions)
  */
 contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
     
@@ -40,24 +40,23 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
     
     struct Receiver {
         address receiverAddress;
-        uint256 maxAmount;           // Max amount that can be withdrawn
-        uint256 withdrawnAmount;     // Amount already withdrawn
-        bool hasWithdrawn;           // Has withdrawn or not
-        bool isActive;               // Receiver still active or already refunded
+        uint256 currentAllocation;    // Current allocation amount
+        uint256 withdrawnAmount;      // Total amount withdrawn
+        bool isActive;                // Receiver still active
     }
     
     struct EscrowRoom {
         address sender;
-        uint256 totalAmount;
-        uint256 withdrawnAmount;
-        uint256 depositedAmount;
-        uint256 refundedAmount;      // Total amount already refunded
+        uint256 totalAllocatedAmount;     // Total amount allocated to all receivers
+        uint256 totalDepositedAmount;     // Total amount deposited by sender
+        uint256 totalWithdrawnAmount;     // Total amount withdrawn
+        uint256 availableBalance;         // Available balance for withdrawals (only from topUpFunds)
         bool isActive;
-        bool isCompleted;
         uint256 createdAt;
+        uint256 lastTopUpAt;             // Last time funds were added
         mapping(address => Receiver) receivers;
         address[] receiverAddresses;
-        uint256 activeReceiverCount; // Number of active receivers
+        uint256 activeReceiverCount;
     }
     
     // ============ STATE VARIABLES ============
@@ -77,7 +76,7 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
     uint256 public minEscrowAmount = 20000 * 10**2; // 20,000 IDRX
     uint256 public maxEscrowAmount = 1000000000 * 10**2; // 1B IDRX
     
-    // ============ EVENTS ============
+        // ============ EVENTS ============
     
     event EscrowCreated(
         bytes32 indexed escrowId,
@@ -88,17 +87,42 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
         uint256[] amounts
     );
     
-    event Allocation(
-        bytes32 indexed escrowId,
-        address indexed receiver,
-        uint256 maxAmount,
-        uint256 createdAt
-    );
-    
-    event FundsDeposited(
+    event FundsTopUp(
         bytes32 indexed escrowId,
         address indexed sender,
+        uint256 amount,
+        uint256 newAvailableBalance
+    );
+    
+    event ReceiverAdded(
+        bytes32 indexed escrowId,
+        address indexed receiver,
         uint256 amount
+    );
+    
+    event ReceiverRemoved(
+        bytes32 indexed escrowId,
+        address indexed receiver,
+        uint256 refundAmount
+    );
+    
+    event ReceiverAmountUpdated(
+        bytes32 indexed escrowId,
+        address indexed receiver,
+        uint256 oldAmount,
+        uint256 newAmount
+    );
+    
+    event EscrowPaused(
+        bytes32 indexed escrowId,
+        address indexed sender,
+        uint256 remainingBalance
+    );
+    
+    event EscrowResumed(
+        bytes32 indexed escrowId,
+        address indexed sender,
+        uint256 availableBalance
     );
     
     event IDRXWithdrawn(
@@ -106,31 +130,6 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
         address indexed receiver,
         uint256 amount,
         address depositWallet
-    );
-    
-    event IDRXBurnedForFiat(
-        bytes32 indexed escrowId,
-        address indexed receiver,
-        uint256 amount,
-        string hashedAccountNumber
-    );
-    
-    event ReceiverRefunded(
-        bytes32 indexed escrowId,
-        address indexed receiver,
-        uint256 refundAmount,
-        address indexed sender
-    );
-    
-    event EscrowCompleted(
-        bytes32 indexed escrowId,
-        uint256 totalWithdrawn
-    );
-    
-    event EscrowCancelled(
-        bytes32 indexed escrowId,
-        address indexed sender,
-        uint256 refundAmount
     );
     
     // ============ MODIFIERS ============
@@ -150,6 +149,16 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
         _;
     }
     
+    modifier receiverExists(bytes32 _escrowId, address _receiver) {
+        require(escrowRooms[_escrowId].receivers[_receiver].receiverAddress != address(0), "Receiver does not exist");
+        _;
+    }
+    
+    modifier receiverActive(bytes32 _escrowId, address _receiver) {
+        require(escrowRooms[_escrowId].receivers[_receiver].isActive, "Receiver is not active");
+        _;
+    }
+    
     // ============ CONSTRUCTOR ============
     
     constructor() Ownable(msg.sender) {
@@ -159,7 +168,7 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
     // ============ MAIN FUNCTIONS ============
     
     /**
-     * @dev Create new escrow room with multiple receivers and directly deposit IDRX
+     * @dev Create new escrow room with multiple receivers
      * @param _receivers Array of receiver addresses
      * @param _amounts Array of amounts for each receiver
      * @return escrowId ID of the created escrow
@@ -192,41 +201,30 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
         
         EscrowRoom storage room = escrowRooms[escrowId];
         room.sender = msg.sender;
-        room.totalAmount = totalAmount;
+        room.totalAllocatedAmount = totalAmount;
+        room.availableBalance = 0;  // Start from 0, no funds in escrow
         room.isActive = true;
         room.createdAt = block.timestamp;
+        room.lastTopUpAt = block.timestamp;
         room.activeReceiverCount = _receivers.length;
         
-        // Add receivers with max amount
+        // Add receivers
         for (uint256 i = 0; i < _receivers.length; i++) {
             require(_receivers[i] != address(0), "Invalid receiver address");
             require(_amounts[i] > 0, "Amount must be greater than 0");
             
             room.receivers[_receivers[i]] = Receiver({
                 receiverAddress: _receivers[i],
-                maxAmount: _amounts[i],
+                currentAllocation: _amounts[i],
                 withdrawnAmount: 0,
-                hasWithdrawn: false,
                 isActive: true
             });
             
             room.receiverAddresses.push(_receivers[i]);
             receiverEscrows[_receivers[i]].push(escrowId);
-            
-            emit Allocation(
-                escrowId,
-                _receivers[i],
-                _amounts[i],
-                block.timestamp
-            );
         }
         
         userEscrows[msg.sender].push(escrowId);
-        
-        // Directly deposit IDRX to escrow
-        IERC20 idrx = IERC20(IDRX_ADDRESS);
-        require(idrx.transferFrom(msg.sender, address(this), totalAmount), "Transfer to escrow failed");
-        room.depositedAmount = totalAmount;
         
         emit EscrowCreated(
             escrowId,
@@ -237,9 +235,194 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
             _amounts
         );
         
-        emit FundsDeposited(escrowId, msg.sender, totalAmount);
-        
         return escrowId;
+    }
+    
+    /**
+     * @dev Top-up funds to existing escrow - amount must equal totalAllocatedAmount
+     * @param _escrowId ID of escrow room
+     * @param _amount Amount of IDRX to add (must equal total allocation)
+     */
+    function topUpFunds(
+        bytes32 _escrowId,
+        uint256 _amount
+    ) external nonReentrant whenNotPaused escrowExists(_escrowId) escrowActive(_escrowId) onlyEscrowSender(_escrowId) {
+        require(_amount > 0, "Amount must be greater than 0");
+        require(_amount <= maxEscrowAmount, "Amount above maximum (1B IDRX)");
+        
+        EscrowRoom storage room = escrowRooms[_escrowId];
+        
+        // Validation: amount must equal totalAllocatedAmount
+        require(_amount == room.totalAllocatedAmount, "Amount must equal total allocated amount");
+        
+        // Transfer IDRX to escrow
+        IERC20 idrx = IERC20(IDRX_ADDRESS);
+        require(idrx.transferFrom(msg.sender, address(this), _amount), "Transfer to escrow failed");
+        
+        room.totalDepositedAmount += _amount;
+        room.availableBalance += _amount;
+                room.lastTopUpAt = block.timestamp;
+        
+        emit FundsTopUp(_escrowId, msg.sender, _amount, room.availableBalance);
+    }
+    
+    /**
+     * @dev Add new receiver to existing escrow - freely add receiver without balance requirement
+     * @param _escrowId ID of escrow room
+     * @param _receiver Address of new receiver
+     * @param _amount Amount for new receiver (2-5000 IDRX)
+     */
+    function addReceiver(
+        bytes32 _escrowId,
+        address _receiver,
+        uint256 _amount
+    ) external nonReentrant whenNotPaused escrowExists(_escrowId) escrowActive(_escrowId) onlyEscrowSender(_escrowId) {
+        require(_receiver != address(0), "Invalid receiver address");
+        // Amount validation: minimum 2 IDRX, maximum 5000 IDRX
+        require(_amount >= 2 * 10**2, "Amount below minimum (2 IDRX)");
+        require(_amount <= 5000 * 10**2, "Amount above maximum (5000 IDRX)");
+        require(escrowRooms[_escrowId].receivers[_receiver].receiverAddress == address(0), "Receiver already exists");
+        
+        EscrowRoom storage room = escrowRooms[_escrowId];
+        
+        // Add receiver without balance check
+        room.receivers[_receiver] = Receiver({
+            receiverAddress: _receiver,
+            currentAllocation: _amount,
+            withdrawnAmount: 0,
+            isActive: true
+        });
+        
+        room.receiverAddresses.push(_receiver);
+        room.activeReceiverCount++;
+        room.totalAllocatedAmount += _amount;
+        // No need to reduce availableBalance
+        
+                receiverEscrows[_receiver].push(_escrowId);
+        
+        emit ReceiverAdded(_escrowId, _receiver, _amount);
+    }
+    
+    /**
+     * @dev Remove receiver from escrow - remove receiver from array and mark inactive
+     * @param _escrowId ID of escrow room
+     * @param _receiver Address of receiver to remove
+     */
+    function removeReceiver(
+        bytes32 _escrowId,
+        address _receiver
+    ) external nonReentrant whenNotPaused escrowExists(_escrowId) escrowActive(_escrowId) onlyEscrowSender(_escrowId) {
+        EscrowRoom storage room = escrowRooms[_escrowId];
+        Receiver storage receiver = room.receivers[_receiver];
+        
+        require(receiver.receiverAddress != address(0), "Receiver does not exist");
+        require(receiver.isActive, "Receiver already inactive");
+        
+        uint256 remainingAllocation = receiver.currentAllocation;
+        
+        // Mark receiver as inactive
+        receiver.isActive = false;
+        room.activeReceiverCount--;
+        room.totalAllocatedAmount -= remainingAllocation;
+        
+        // Remove address from receiverAddresses array
+        for (uint256 i = 0; i < room.receiverAddresses.length; i++) {
+            if (room.receiverAddresses[i] == _receiver) {
+                // Shift all elements after index i to the left
+                for (uint256 j = i; j < room.receiverAddresses.length - 1; j++) {
+                    room.receiverAddresses[j] = room.receiverAddresses[j + 1];
+                }
+                // Remove last element
+                room.receiverAddresses.pop();
+                break;
+            }
+        }
+        
+        // Reset receiver data so it can be added again
+        delete room.receivers[_receiver];
+        
+        emit ReceiverRemoved(_escrowId, _receiver, remainingAllocation);
+    }
+    
+    /**
+     * @dev Update amount for existing receiver - freely change amount without balance requirement
+     * @param _escrowId ID of escrow room
+     * @param _receiver Address of receiver
+     * @param _newAmount New amount for receiver (2-5000 IDRX)
+     */
+    function updateReceiverAmount(
+        bytes32 _escrowId,
+        address _receiver,
+        uint256 _newAmount
+    ) external nonReentrant whenNotPaused escrowExists(_escrowId) escrowActive(_escrowId) onlyEscrowSender(_escrowId) {
+        // Amount validation: minimum 2 IDRX, maximum 5000 IDRX
+        require(_newAmount >= 2 * 10**2, "Amount below minimum (2 IDRX)");
+        require(_newAmount <= 5000 * 10**2, "Amount above maximum (5000 IDRX)");
+        
+        EscrowRoom storage room = escrowRooms[_escrowId];
+        Receiver storage receiver = room.receivers[_receiver];
+        
+        require(receiver.receiverAddress != address(0), "Receiver does not exist");
+        require(receiver.isActive, "Receiver is not active");
+        
+        uint256 oldAmount = receiver.currentAllocation;
+        
+        // Update amount without balance check
+        room.totalAllocatedAmount = room.totalAllocatedAmount - oldAmount + _newAmount;
+        receiver.currentAllocation = _newAmount;
+        
+        emit ReceiverAmountUpdated(_escrowId, _receiver, oldAmount, _newAmount);
+    }
+    
+    /**
+     * @dev Pause escrow (sender can pause to stop payments temporarily)
+     * @param _escrowId ID of escrow room
+     */
+    function pauseEscrow(
+        bytes32 _escrowId
+    ) external nonReentrant escrowExists(_escrowId) onlyEscrowSender(_escrowId) {
+        EscrowRoom storage room = escrowRooms[_escrowId];
+        require(room.isActive, "Escrow already paused");
+        
+        room.isActive = false;
+        
+        emit EscrowPaused(_escrowId, msg.sender, room.availableBalance);
+    }
+    
+    /**
+     * @dev Resume escrow (sender can resume after pausing)
+     * @param _escrowId ID of escrow room
+     */
+    function resumeEscrow(
+        bytes32 _escrowId
+    ) external nonReentrant escrowExists(_escrowId) onlyEscrowSender(_escrowId) {
+        EscrowRoom storage room = escrowRooms[_escrowId];
+        require(!room.isActive, "Escrow already active");
+        
+        room.isActive = true;
+        
+        emit EscrowResumed(_escrowId, msg.sender, room.availableBalance);
+    }
+    
+    /**
+     * @dev Close escrow permanently and refund remaining balance to sender
+     * @param _escrowId ID of escrow room
+     */
+    function closeEscrow(
+        bytes32 _escrowId
+    ) external nonReentrant escrowExists(_escrowId) onlyEscrowSender(_escrowId) {
+        EscrowRoom storage room = escrowRooms[_escrowId];
+        
+        room.isActive = false;
+        
+        uint256 remainingBalance = room.availableBalance;
+        
+        if (remainingBalance > 0) {
+            IERC20 idrx = IERC20(IDRX_ADDRESS);
+            require(idrx.transfer(room.sender, remainingBalance), "Refund transfer failed");
+        }
+        
+        emit EscrowPaused(_escrowId, msg.sender, remainingBalance);
     }
     
     /**
@@ -257,19 +440,15 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
         require(receiver.receiverAddress == msg.sender, "Not authorized receiver");
         require(receiver.isActive, "Receiver is not active");
         require(_amount > 0, "Amount must be greater than 0");
-        require(_amount <= receiver.maxAmount - receiver.withdrawnAmount, "Amount exceeds available balance");
+        require(_amount <= receiver.currentAllocation, "Amount exceeds current allocation");
         
         // Calculate fee from the total amount
         uint256 fee = (_amount * platformFeeBps) / 10000;
         uint256 netAmount = _amount - fee;
         
         receiver.withdrawnAmount += _amount;
-        room.withdrawnAmount += _amount;
-        
-        // Update status if already withdrawn all
-        if (receiver.withdrawnAmount >= receiver.maxAmount) {
-            receiver.hasWithdrawn = true;
-        }
+        room.totalWithdrawnAmount += _amount;
+        room.availableBalance -= _amount;
         
         IERC20 idrx = IERC20(IDRX_ADDRESS);
         
@@ -282,9 +461,6 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
         }
         
         emit IDRXWithdrawn(_escrowId, msg.sender, _amount, msg.sender);
-        
-        // Check if all receivers have withdrawn
-        _checkAndCompleteEscrow(_escrowId);
     }
     
     /**
@@ -321,26 +497,25 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
         require(receiver.receiverAddress == msg.sender, "Not authorized receiver");
         require(receiver.isActive, "Receiver is not active");
         require(_amount > 0, "Amount must be greater than 0");
-        require(_amount <= receiver.maxAmount - receiver.withdrawnAmount, "Amount exceeds available balance");
+        require(_amount <= receiver.currentAllocation, "Amount exceeds current allocation");
         
         // Calculate fee from the total amount
         uint256 fee = (_amount * platformFeeBps) / 10000;
         
-        receiver.withdrawnAmount += _amount;
-        room.withdrawnAmount += _amount;
+        // Calculate net amount (after fee deduction)
+        uint256 netAmount = _amount - fee;
         
-        // Update status if already withdrawn all
-        if (receiver.withdrawnAmount >= receiver.maxAmount) {
-            receiver.hasWithdrawn = true;
-        }
+        receiver.withdrawnAmount += _amount;
+        room.totalWithdrawnAmount += _amount;
+        room.availableBalance -= _amount;
         
         // STEP 1: Smart contract burns IDRX using IIDRX interface
         // This destroys the tokens and makes them available for fiat conversion
         // Backend provides hashedAccountNumber for IDRX.co processing
         IIDRX idrx = IIDRX(IDRX_ADDRESS);
         idrx.burnWithAccountNumber(
-            _amount,                 // Amount yang di-burn
-            _hashedAccountNumber     // Hash dari backend
+            netAmount,               // Amount to burn = after fee deduction
+            _hashedAccountNumber     // Hash from backend
         );
         
         // STEP 2: Frontend must now call IDRX API to complete fiat withdrawal
@@ -348,7 +523,7 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
         // Required params: txHash (from this transaction), amount, bank details
         // Note: IDRX.burnWithAccountNumber() called with correct parameters:
         // - amount: _amount (IDRX amount to burn)
-        // - accountNumber: _hashedAccountNumber (hash dari backend)
+        // - accountNumber: _hashedAccountNumber (hash from backend)
         // User address (_user) is automatically determined by IDRX contract
         
         // Transfer fee to platform (fee taken from escrow balance)
@@ -357,104 +532,44 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
             require(idrxERC20.transfer(feeRecipient, fee), "Fee transfer failed");
         }
         
-        // Emit event for burning completion
-        // Frontend should listen to this event to proceed with IDRX API call
-        emit IDRXBurnedForFiat(
-            _escrowId,
-            msg.sender,
-            _amount,
-            _hashedAccountNumber
-        );
-        
-        // Check if all receivers have withdrawn
-        _checkAndCompleteEscrow(_escrowId);
+
     }
     
-    /**
-     * @dev Refund receiver who made wrong input (only sender can do this)
-     * @param _escrowId ID of escrow room
-     * @param _receiver Address of receiver to refund
-     */
-    function refundReceiver(
-        bytes32 _escrowId,
-        address _receiver
-    ) external nonReentrant whenNotPaused escrowExists(_escrowId) escrowActive(_escrowId) onlyEscrowSender(_escrowId) {
-        EscrowRoom storage room = escrowRooms[_escrowId];
-        Receiver storage receiver = room.receivers[_receiver];
-        
-        require(receiver.receiverAddress != address(0), "Receiver does not exist");
-        require(receiver.isActive, "Receiver already refunded");
-        require(!receiver.hasWithdrawn, "Cannot refund receiver who already withdrew");
-        
-        uint256 refundAmount = receiver.maxAmount;
-        
-        // Update receiver status
-        receiver.isActive = false;
-        room.activeReceiverCount--;
-        room.refundedAmount += refundAmount;
-        
-        // Refund IDRX to sender
-        IERC20 idrx = IERC20(IDRX_ADDRESS);
-        require(idrx.transfer(room.sender, refundAmount), "Refund transfer failed");
-        
-        emit ReceiverRefunded(_escrowId, _receiver, refundAmount, msg.sender);
-        
-        // Check if escrow should be completed
-        _checkAndCompleteEscrow(_escrowId);
-    }
+
     
-    /**
-     * @dev Cancel escrow and refund funds to sender
-     * @param _escrowId ID of escrow room
-     */
-    function cancelEscrow(
-        bytes32 _escrowId
-    ) external nonReentrant whenNotPaused escrowExists(_escrowId) onlyEscrowSender(_escrowId) {
-        EscrowRoom storage room = escrowRooms[_escrowId];
-        
-        require(room.isActive, "Escrow is not active");
-        
-        room.isActive = false;
-        
-        uint256 refundAmount = room.totalAmount - room.withdrawnAmount - room.refundedAmount;
-        
-        if (refundAmount > 0) {
-            IERC20 idrx = IERC20(IDRX_ADDRESS);
-            require(idrx.transfer(room.sender, refundAmount), "Refund transfer failed");
-        }
-        
-        emit EscrowCancelled(_escrowId, room.sender, refundAmount);
-    }
+
     
     // ============ VIEW FUNCTIONS ============
     
     /**
-     * @dev Get escrow details
+     * @dev Get escrow details with receiver addresses
      */
     function getEscrowDetails(bytes32 _escrowId) external view returns (
         address sender,
-        uint256 totalAmount,
-        uint256 withdrawnAmount,
-        uint256 depositedAmount,
-        uint256 refundedAmount,
+        uint256 totalAllocatedAmount,
+        uint256 totalDepositedAmount,
+        uint256 totalWithdrawnAmount,
+        uint256 availableBalance,
         bool isActive,
-        bool isCompleted,
         uint256 createdAt,
+        uint256 lastTopUpAt,
         uint256 receiverCount,
-        uint256 activeReceiverCount
+        uint256 activeReceiverCount,
+        address[] memory receiverAddresses
     ) {
         EscrowRoom storage room = escrowRooms[_escrowId];
         return (
             room.sender,
-            room.totalAmount,
-            room.withdrawnAmount,
-            room.depositedAmount,
-            room.refundedAmount,
+            room.totalAllocatedAmount,
+            room.totalDepositedAmount,
+            room.totalWithdrawnAmount,
+            room.availableBalance,
             room.isActive,
-            room.isCompleted,
             room.createdAt,
+            room.lastTopUpAt,
             room.receiverAddresses.length,
-            room.activeReceiverCount
+            room.activeReceiverCount,
+            room.receiverAddresses
         );
     }
     
@@ -462,16 +577,14 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
      * @dev Get receiver details
      */
     function getReceiverDetails(bytes32 _escrowId, address _receiver) external view returns (
-        uint256 maxAmount,
+        uint256 currentAllocation,
         uint256 withdrawnAmount,
-        bool hasWithdrawn,
         bool isActive
     ) {
         Receiver storage receiver = escrowRooms[_escrowId].receivers[_receiver];
         return (
-            receiver.maxAmount,
+            receiver.currentAllocation,
             receiver.withdrawnAmount,
-            receiver.hasWithdrawn,
             receiver.isActive
         );
     }
@@ -480,19 +593,21 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
      * @dev Get withdrawable amount for receiver
      */
     function getWithdrawableAmount(bytes32 _escrowId, address _receiver) external view returns (uint256 withdrawableAmount) {
-        Receiver storage receiver = escrowRooms[_escrowId].receivers[_receiver];
-        if (!receiver.isActive || receiver.hasWithdrawn) {
+        EscrowRoom storage room = escrowRooms[_escrowId];
+        Receiver storage receiver = room.receivers[_receiver];
+        
+        if (!receiver.isActive) {
             return 0;
         }
-        return receiver.maxAmount - receiver.withdrawnAmount;
+        return receiver.currentAllocation;
     }
     
     /**
-     * @dev Get allocation for receiver (max amount)
+     * @dev Get allocation for receiver (current amount)
      */
     function getAllocation(bytes32 _escrowId, address _receiver) external view returns (uint256 allocation) {
         Receiver storage receiver = escrowRooms[_escrowId].receivers[_receiver];
-        return receiver.maxAmount;
+        return receiver.currentAllocation;
     }
     
     /**
@@ -516,27 +631,23 @@ contract EscrowIDRX is ReentrancyGuard, Ownable, Pausable {
         return receiverEscrows[_receiver];
     }
     
-    // ============ INTERNAL FUNCTIONS ============
-    
     /**
-     * @dev Check and update escrow status
+     * @dev Get escrow balance info
      */
-    function _checkAndCompleteEscrow(bytes32 _escrowId) internal {
+    function getEscrowBalance(bytes32 _escrowId) external view returns (
+        uint256 totalAllocated,
+        uint256 availableBalance,
+        uint256 totalDeposited,
+        uint256 totalWithdrawn
+    ) {
         EscrowRoom storage room = escrowRooms[_escrowId];
-        
-        bool allActiveWithdrawn = true;
-        for (uint256 i = 0; i < room.receiverAddresses.length; i++) {
-            Receiver storage receiver = room.receivers[room.receiverAddresses[i]];
-            if (receiver.isActive && !receiver.hasWithdrawn) {
-                allActiveWithdrawn = false;
-                break;
-            }
-        }
-        
-        if (allActiveWithdrawn && room.activeReceiverCount == 0) {
-            room.isCompleted = true;
-            room.isActive = false;
-            emit EscrowCompleted(_escrowId, room.withdrawnAmount);
-        }
+        return (
+            room.totalAllocatedAmount,
+            room.availableBalance,
+            room.totalDepositedAmount,
+            room.totalWithdrawnAmount
+        );
     }
+    
+
 }
