@@ -3,13 +3,10 @@ import { useState } from "react";
 import { X, Plus, Trash2, Wallet } from "lucide-react";
 import { ReceiverInGroup } from "@/types/receiverInGroupTemplate";
 import { useAuth } from "@/lib/userContext";
-import { addReceiverToGroup } from "@/app/api/api";
+import { addReceiverToGroup, saveEscrowToDatabase } from "@/app/api/api";
 import { useParams } from "next/navigation";
 import { useWalletClientHook } from "@/lib/useWalletClient";
-import { 
-  createEscrowOnchain, 
-  parseTokenAmount
-} from "@/lib/smartContract";
+import { createEscrowOnchain, parseTokenAmount } from "@/lib/smartContract";
 
 interface CreateStreamModalProps {
   isOpen: boolean;
@@ -25,7 +22,7 @@ interface ReceiverData {
 }
 
 interface FormData {
-  token: 'USDC' | 'IDRX' | null;
+  token: "USDC" | "IDRX" | null;
   receivers: ReceiverData[];
 }
 
@@ -36,15 +33,15 @@ const AVAILABLE_TOKENS = [
     name: "USD Coin (Base)",
     icon: "💵",
     description: "USDC on Base Network",
-    escrowType: "EscrowUSDC"
+    escrowType: "EscrowUSDC",
   },
   {
     symbol: "IDRX",
     name: "IDRX Token (Base)",
     icon: "🔗",
     description: "IDRX on Base Network",
-    escrowType: "EscrowIDRX"
-  }
+    escrowType: "EscrowIDRX",
+  },
 ];
 
 export default function CreateStreamModal({
@@ -58,10 +55,13 @@ export default function CreateStreamModal({
   const walletClient = useWalletClientHook();
   const [formData, setFormData] = useState<FormData>({
     token: null,
-    receivers: [{ id: "1", address: "", fullname: "", amount: "" }]
+    receivers: [{ id: "1", address: "", fullname: "", amount: "" }],
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
+  const [message, setMessage] = useState<{
+    type: "success" | "error" | "info";
+    text: string;
+  } | null>(null);
 
   const handleTokenSelect = (token: "USDC" | "IDRX") => {
     setFormData({ ...formData, token });
@@ -71,7 +71,10 @@ export default function CreateStreamModal({
     const newId = (formData.receivers.length + 1).toString();
     setFormData({
       ...formData,
-      receivers: [...formData.receivers, { id: newId, address: "", fullname: "", amount: "" }]
+      receivers: [
+        ...formData.receivers,
+        { id: newId, address: "", fullname: "", amount: "" },
+      ],
     });
   };
 
@@ -79,38 +82,52 @@ export default function CreateStreamModal({
     if (formData.receivers.length > 1) {
       setFormData({
         ...formData,
-        receivers: formData.receivers.filter(r => r.id !== id)
+        receivers: formData.receivers.filter((r) => r.id !== id),
       });
     }
   };
 
-  const updateReceiver = (id: string, field: keyof ReceiverData, value: string) => {
+  const updateReceiver = (
+    id: string,
+    field: keyof ReceiverData,
+    value: string,
+  ) => {
     setFormData({
       ...formData,
-      receivers: formData.receivers.map(r => 
-        r.id === id ? { ...r, [field]: value } : r
-      )
+      receivers: formData.receivers.map((r) =>
+        r.id === id ? { ...r, [field]: value } : r,
+      ),
     });
   };
 
   const handleSubmit = async () => {
     if (!walletClient) {
-      setMessage({ type: 'error', text: 'Wallet client not ready. Please try reconnecting your wallet.' });
+      setMessage({
+        type: "error",
+        text: "Wallet client not ready. Please try reconnecting your wallet.",
+      });
       return;
     }
 
     // Validate all receivers have data
-    const isValid = formData.receivers.every(r => 
-      r.address.trim() && r.fullname.trim() && r.amount.trim() && parseFloat(r.amount) > 0
+    const isValid = formData.receivers.every(
+      (r) =>
+        r.address.trim() &&
+        r.fullname.trim() &&
+        r.amount.trim() &&
+        parseFloat(r.amount) > 0,
     );
 
     if (!isValid) {
-      setMessage({ type: 'error', text: 'Please fill in all receiver information and ensure amounts are greater than 0' });
+      setMessage({
+        type: "error",
+        text: "Please fill in all receiver information and ensure amounts are greater than 0",
+      });
       return;
     }
 
     if (!formData.token) {
-      setMessage({ type: 'error', text: 'Please select a token type' });
+      setMessage({ type: "error", text: "Please select a token type" });
       return;
     }
 
@@ -119,16 +136,23 @@ export default function CreateStreamModal({
 
     try {
       // Prepare escrow data for onchain creation
-      const receivers = formData.receivers.map(r => r.address as `0x${string}`);
-      const amounts = formData.receivers.map(r => parseTokenAmount(r.amount, formData.token === 'USDC' ? 6 : 2));
-      const totalAmount = amounts.reduce((acc, amount) => acc + amount, BigInt(0));
+      const receivers = formData.receivers.map(
+        (r) => r.address as `0x${string}`,
+      );
+      const amounts = formData.receivers.map((r) =>
+        parseTokenAmount(r.amount, formData.token === "USDC" ? 6 : 2),
+      );
+      const totalAmount = amounts.reduce(
+        (acc, amount) => acc + amount,
+        BigInt(0),
+      );
 
       // Debug logging
-      console.log('Escrow data prepared:', {
+      console.log("Escrow data prepared:", {
         receivers,
-        amounts: amounts.map(a => a.toString()),
+        amounts: amounts.map((a) => a.toString()),
         totalAmount: totalAmount.toString(),
-        tokenType: formData.token
+        tokenType: formData.token,
       });
 
       // Create escrow onchain first
@@ -138,33 +162,33 @@ export default function CreateStreamModal({
         {
           receivers,
           amounts,
-          totalAmount
-        }
+          totalAmount,
+        },
       );
 
       if (!escrowResult.success) {
-        throw new Error(escrowResult.error || 'Failed to create escrow onchain');
+        throw new Error(
+          escrowResult.error || "Failed to create escrow onchain",
+        );
       }
-
-      // IMPORTANT: Save escrowId to backend to link with group
-      // const escrowData = {
-      //   groupId: groupId,
-      //   escrowId: escrowResult.escrowId,
-      //   tokenType: formData.token,
-      //   senderAddress: walletClient.account.address,
-      //   totalAmount: totalAmount.toString(),
-      //   receivers: formData.receivers.map(r => ({
-      //     address: r.address,
-      //     fullname: r.fullname,
-      //     amount: r.amount
-      //   })),
-      //   transactionHash: escrowResult.transactionHash,
-      //   status: 'active',
-      //   createdAt: new Date().toISOString()
-      // };
+      const escrowData = {
+        groupId: groupId,
+        escrowId: escrowResult.escrowId ?? "",
+        tokenType: formData.token,
+        senderAddress: walletClient.account.address,
+        totalAmount: totalAmount.toString(),
+        receivers: formData.receivers.map((r) => ({
+          address: r.address,
+          fullname: r.fullname,
+          amount: r.amount,
+        })),
+        transactionHash: escrowResult.transactionHash ?? "",
+        status: "active",
+        createdAt: new Date().toISOString(),
+      };
 
       // Save escrow data to database to link escrowId with groupId
-      // await saveEscrowToDatabase(escrowData);
+      await saveEscrowToDatabase(escrowData);
 
       // If escrow created successfully onchain, save to backend
       for (const receiver of formData.receivers) {
@@ -191,9 +215,9 @@ export default function CreateStreamModal({
         onCreateStream(newStream);
       }
 
-      setMessage({ 
-        type: 'success', 
-        text: `Escrow created successfully onchain! Transaction: ${escrowResult.transactionHash}` 
+      setMessage({
+        type: "success",
+        text: `Escrow created successfully onchain! Transaction: ${escrowResult.transactionHash}`,
       });
 
       // Close modal after a delay to show success message
@@ -201,12 +225,14 @@ export default function CreateStreamModal({
         onClose();
         resetForm();
       }, 2000);
-
     } catch (e) {
-      console.error('Error creating escrow:', e);
-      setMessage({ 
-        type: 'error', 
-        text: e instanceof Error ? e.message : 'Failed to create escrow streams. Please try again.' 
+      console.error("Error creating escrow:", e);
+      setMessage({
+        type: "error",
+        text:
+          e instanceof Error
+            ? e.message
+            : "Failed to create escrow streams. Please try again.",
       });
     } finally {
       setIsLoading(false);
@@ -216,7 +242,7 @@ export default function CreateStreamModal({
   const resetForm = () => {
     setFormData({
       token: null,
-      receivers: [{ id: "1", address: "", fullname: "", amount: "" }]
+      receivers: [{ id: "1", address: "", fullname: "", amount: "" }],
     });
     setMessage(null);
   };
@@ -234,8 +260,12 @@ export default function CreateStreamModal({
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-white/10">
           <div>
-            <h3 className="text-white text-xl font-semibold">Create Escrow Streams</h3>
-            <p className="text-white/60 text-sm mt-1">Set up payment streams with smart contract escrow</p>
+            <h3 className="text-white text-xl font-semibold">
+              Create Escrow Streams
+            </h3>
+            <p className="text-white/60 text-sm mt-1">
+              Set up payment streams with smart contract escrow
+            </p>
           </div>
           <button
             onClick={handleClose}
@@ -254,23 +284,33 @@ export default function CreateStreamModal({
               </label>
               <select
                 value={formData.token || ""}
-                onChange={(e) => handleTokenSelect(e.target.value as "USDC" | "IDRX")}
+                onChange={(e) =>
+                  handleTokenSelect(e.target.value as "USDC" | "IDRX")
+                }
                 className="w-full p-4 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all"
               >
-                <option value="" disabled>Choose a token</option>
+                <option value="" disabled>
+                  Choose a token
+                </option>
                 {AVAILABLE_TOKENS.map((token) => (
-                  <option key={token.symbol} value={token.symbol} className="bg-gray-800 text-white">
+                  <option
+                    key={token.symbol}
+                    value={token.symbol}
+                    className="bg-gray-800 text-white"
+                  >
                     {token.symbol} - {token.description}
                   </option>
                 ))}
               </select>
-              
+
               {/* Selected Token Display */}
               {formData.token && (
                 <div className="mt-3 p-3 bg-cyan-500/10 border border-cyan-500/20 rounded-lg">
                   <div className="flex items-center space-x-2">
                     <div>
-                      <p className="text-cyan-300 font-medium">{formData.token}</p>
+                      <p className="text-cyan-300 font-medium">
+                        {formData.token}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -280,7 +320,9 @@ export default function CreateStreamModal({
             {/* Receivers */}
             <div>
               <div className="flex justify-between items-center mb-3">
-                <label className="text-white/80 text-sm font-medium">Receivers</label>
+                <label className="text-white/80 text-sm font-medium">
+                  Receivers
+                </label>
                 <button
                   type="button"
                   onClick={addReceiver}
@@ -290,22 +332,33 @@ export default function CreateStreamModal({
                   <span>Add Receiver</span>
                 </button>
               </div>
-              
+
               <div className="space-y-3">
                 {formData.receivers.map((receiver) => (
-                  <div key={receiver.id} className="flex items-center space-x-3 p-3 bg-white/5 border border-white/10 rounded-lg">
+                  <div
+                    key={receiver.id}
+                    className="flex items-center space-x-3 p-3 bg-white/5 border border-white/10 rounded-lg"
+                  >
                     <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
                       <input
                         type="text"
                         value={receiver.fullname}
-                        onChange={(e) => updateReceiver(receiver.id, 'fullname', e.target.value)}
+                        onChange={(e) =>
+                          updateReceiver(
+                            receiver.id,
+                            "fullname",
+                            e.target.value,
+                          )
+                        }
                         placeholder="Full Name"
                         className="w-full p-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 text-sm"
                       />
                       <input
                         type="text"
                         value={receiver.address}
-                        onChange={(e) => updateReceiver(receiver.id, 'address', e.target.value)}
+                        onChange={(e) =>
+                          updateReceiver(receiver.id, "address", e.target.value)
+                        }
                         placeholder="Wallet Address (0x...)"
                         className="w-full p-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 text-sm"
                       />
@@ -314,8 +367,10 @@ export default function CreateStreamModal({
                         step="0.01"
                         min="0"
                         value={receiver.amount}
-                        onChange={(e) => updateReceiver(receiver.id, 'amount', e.target.value)}
-                        placeholder={`Amount (${formData.token || 'Token'})`}
+                        onChange={(e) =>
+                          updateReceiver(receiver.id, "amount", e.target.value)
+                        }
+                        placeholder={`Amount (${formData.token || "Token"})`}
                         className="w-full p-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 text-sm"
                       />
                     </div>
@@ -335,13 +390,15 @@ export default function CreateStreamModal({
 
             {/* Message Display */}
             {message && (
-              <div className={`p-4 rounded-lg border ${
-                message.type === 'success' 
-                  ? 'bg-green-500/20 border-green-500/30 text-green-300'
-                  : message.type === 'error'
-                  ? 'bg-red-500/20 border-red-500/30 text-red-300'
-                  : 'bg-blue-500/20 border-blue-500/30 text-blue-300'
-              }`}>
+              <div
+                className={`p-4 rounded-lg border ${
+                  message.type === "success"
+                    ? "bg-green-500/20 border-green-500/30 text-green-300"
+                    : message.type === "error"
+                      ? "bg-red-500/20 border-red-500/30 text-red-300"
+                      : "bg-blue-500/20 border-blue-500/30 text-blue-300"
+                }`}
+              >
                 <div className="flex items-center space-x-2">
                   <span>{message.text}</span>
                 </div>
@@ -355,8 +412,8 @@ export default function CreateStreamModal({
               disabled={isLoading || !walletClient}
               className={`w-full py-4 px-6 rounded-xl font-medium transition-all duration-300 flex items-center justify-center space-x-2 ${
                 isLoading || !walletClient
-                  ? 'bg-gray-500/50 text-gray-300 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:shadow-lg hover:shadow-cyan-500/25 hover:scale-105'
+                  ? "bg-gray-500/50 text-gray-300 cursor-not-allowed"
+                  : "bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:shadow-lg hover:shadow-cyan-500/25 hover:scale-105"
               }`}
             >
               {isLoading ? (
@@ -367,7 +424,10 @@ export default function CreateStreamModal({
               ) : !walletClient ? (
                 <>
                   <Wallet className="w-5 h-5" />
-                  <span>Wallet client not ready. Please try reconnecting your wallet.</span>
+                  <span>
+                    Wallet client not ready. Please try reconnecting your
+                    wallet.
+                  </span>
                 </>
               ) : (
                 <>

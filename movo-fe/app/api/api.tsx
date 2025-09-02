@@ -294,6 +294,7 @@ export const saveEscrowToDatabase = async (escrowData: {
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/escrows`,
       escrowData,
     );
+    console.log(response.data)
     return response.data;
   } catch (error) {
     console.error("Error saving escrow to database:", error);
