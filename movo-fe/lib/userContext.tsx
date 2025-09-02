@@ -1,6 +1,12 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
 import { useRouter } from "next/navigation";
 import { getMe } from "@/utils/auth";
 
@@ -23,6 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkAuth = async () => {
     setLoading(true);
     const data = await getMe();
+    console.log(data);
     // console.log(data.user);
     if (data && data.authenticated) {
       // console.log(data.user)

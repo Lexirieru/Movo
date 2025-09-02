@@ -163,8 +163,12 @@ export default function BankForm({
       const bankCode = bankDictionary[bankForm.bankName];
 
       // update ke backend
-      await changeBankAccount(user?._id, bankForm.bankAccountNumber, bankCode);
-
+      const changeBank = await changeBankAccount(
+        user?._id,
+        bankForm.bankAccountNumber,
+        bankCode,
+      );
+      console.log(changeBank);
       // setelah sukses, ambil lagi data terbaru dari backend
       const refreshed = await getBankAccount(user?.email);
       if (refreshed?.data) {
@@ -195,6 +199,60 @@ export default function BankForm({
       }
     } catch (err) {
       console.error("Failed to update bank account", err);
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  // 🔥 Function untuk handle save bank account baru (sama seperti confirm changes)
+  const handleSaveBankAccount = async (newBankData: {
+    bankName: string;
+    bankAccountNumber: string;
+  }) => {
+    try {
+      setIsConfirming(true);
+      const bankCode = bankDictionary[newBankData.bankName];
+
+      // harus changeBankAccount karena
+      const addBankAccount = await changeBankAccount(
+        user?.email,
+        newBankData.bankAccountNumber,
+        bankCode,
+      );
+
+      // setelah sukses, ambil lagi data terbaru dari backend
+      const refreshed = await getBankAccount(user?.email);
+      if (refreshed?.data) {
+        const updated: BankAccountInformation = {
+          bankId: refreshed.data.bankId,
+          bankName: refreshed.data.bankName,
+          bankCode: refreshed.data.bankCode,
+          bankAccountNumber: refreshed.data.bankAccountNumber,
+          bankAccountName: refreshed.data.bankAccountName,
+        };
+
+        setOriginalData(updated);
+        setBankAccountData(updated);
+
+        // isi lagi ke form utama dengan data terbaru
+        onChange({
+          target: { name: "bankName", value: updated.bankName },
+        } as any);
+        onChange({
+          target: {
+            name: "bankAccountNumber",
+            value: updated.bankAccountNumber,
+          },
+        } as any);
+        onChange({
+          target: { name: "accountHolderName", value: updated.bankAccountName },
+        } as any);
+      }
+
+      // 🔥 JANGAN tutup popup! Biarkan user close manual setelah liat account holder name
+      // setShowAddBankPopup(false);
+    } catch (err) {
+      console.error("Failed to save bank account", err);
     } finally {
       setIsConfirming(false);
     }
@@ -371,7 +429,11 @@ export default function BankForm({
 
       {/* Add Bank Popup */}
       {showAddBankPopup && (
-        <AddBankPopup onClose={() => setShowAddBankPopup(false)} />
+        <AddBankPopup
+          onClose={() => setShowAddBankPopup(false)}
+          onSave={handleSaveBankAccount}
+          isConfirming={isConfirming}
+        />
       )}
 
       {/* Amount Summary */}
@@ -504,14 +566,28 @@ export default function BankForm({
 }
 
 // Add Bank Popup Component
-function AddBankPopup({ onClose }: { onClose: () => void }) {
+function AddBankPopup({
+  onClose,
+  onSave,
+  isConfirming,
+}: {
+  onClose: () => void;
+  onSave: (bankData: {
+    bankName: string;
+    bankAccountNumber: string;
+  }) => Promise<void>;
+  isConfirming: boolean;
+}) {
   const [newBankForm, setNewBankForm] = useState({
     bankName: "",
     bankAccountNumber: "",
-    accountHolderName: "",
+    accountHolderName: "", // 🔥 Akan di-populate dari backend setelah save
   });
   const [showBankSelector, setShowBankSelector] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [hasSaved, setHasSaved] = useState(false); // 🔥 Track apakah sudah save
+  const [savedAccountHolderName, setSavedAccountHolderName] = useState(""); // 🔥 Simpan nama yang di-fetch
+
+  const { user } = useAuth(); // 🔥 Ambil user context untuk fetch data
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -531,35 +607,27 @@ function AddBankPopup({ onClose }: { onClose: () => void }) {
 
   const handleSave = async () => {
     try {
-      setIsSaving(true);
-      const bankCode = bankDictionary[newBankForm.bankName];
-
-      // TODO: Implement API call to save new bank account
-      // await saveBankAccount({
-      //   bankName: newBankForm.bankName,
-      //   bankCode,
-      //   bankAccountNumber: newBankForm.bankAccountNumber,
-      //   accountHolderName: newBankForm.accountHolderName
-      // });
-
-      console.log("Saving bank account:", {
-        ...newBankForm,
-        bankCode,
+      // 🔥 Panggil function dari parent
+      await onSave({
+        bankName: newBankForm.bankName,
+        bankAccountNumber: newBankForm.bankAccountNumber,
       });
 
-      // Close popup after successful save
-      onClose();
+      // 🔥 Setelah save berhasil, fetch data terbaru untuk mendapatkan account holder name
+      if (user?.email) {
+        const refreshed = await getBankAccount(user.email);
+        if (refreshed?.data?.bankAccountName) {
+          setSavedAccountHolderName(refreshed.data.bankAccountName);
+          setHasSaved(true); // 🔥 Mark sebagai sudah saved
+        }
+      }
     } catch (err) {
       console.error("Failed to save bank account", err);
-    } finally {
-      setIsSaving(false);
     }
   };
 
-  const isValid =
-    newBankForm.bankName &&
-    newBankForm.bankAccountNumber &&
-    newBankForm.accountHolderName;
+  // 🔥 Validasi hanya perlu bank name dan account number
+  const isValid = newBankForm.bankName && newBankForm.bankAccountNumber;
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -618,32 +686,81 @@ function AddBankPopup({ onClose }: { onClose: () => void }) {
             required
           />
 
-          {/* Account Holder Name */}
-          <FormInput
-            type="text"
-            name="accountHolderName"
-            placeholder="Account Holder Name"
-            value={newBankForm.accountHolderName}
-            onChange={handleInputChange}
-            icon={Mail}
-            required
-          />
+          {/* Account Holder Name - Show status based on save state */}
+          <div>
+            <label className="text-white/80 text-sm mb-2 block">
+              Account Holder Name
+            </label>
+            <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+              <div className="flex items-center space-x-3">
+                <Mail className="w-5 h-5 text-gray-400" />
+                {hasSaved && savedAccountHolderName ? (
+                  // 🔥 Tampilkan nama setelah berhasil save
+                  <div className="flex-1">
+                    <div className="text-white font-medium">
+                      {savedAccountHolderName}
+                    </div>
+                    <div className="text-green-400 text-xs mt-1">
+                      ✓ Successfully fetched from bank
+                    </div>
+                  </div>
+                ) : hasSaved && isConfirming ? (
+                  // 🔥 Loading state setelah save
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <span className="text-white/70 text-sm">
+                      Fetching account holder name...
+                    </span>
+                  </div>
+                ) : (
+                  // 🔥 Default state sebelum save
+                  <span className="text-gray-400 text-sm">
+                    Will be fetched from bank after saving
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
 
           {/* Save Button */}
           <button
             onClick={handleSave}
-            disabled={!isValid || isSaving}
+            disabled={!isValid || isConfirming}
             className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3 rounded-xl transition-all font-medium flex items-center justify-center space-x-2"
           >
-            {isSaving ? (
+            {isConfirming ? (
               <>
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                 <span>Saving...</span>
               </>
+            ) : hasSaved && savedAccountHolderName ? (
+              // 🔥 Show success state
+              <span>✓ Bank Account Saved</span>
             ) : (
               <span>Save Bank Account</span>
             )}
           </button>
+
+          {/* 🔥 Success message dengan instruksi untuk close */}
+          {hasSaved && savedAccountHolderName && (
+            <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
+              <div className="flex items-start space-x-3">
+                <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                </div>
+                <div>
+                  <div className="text-green-400 font-medium text-sm">
+                    Bank Account Added Successfully!
+                  </div>
+                  <div className="text-white/60 text-sm mt-1">
+                    Your bank account has been verified and account holder name
+                    has been fetched. You can close this popup using the ×
+                    button above.
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { Wallet, Shield, AlertTriangle } from "lucide-react";
-import { ConnectWallet } from "@coinbase/onchainkit/wallet";
 
 export default function WalletWarning() {
   return (
@@ -19,7 +18,9 @@ export default function WalletWarning() {
 
         {/* Description */}
         <p className="text-gray-300 mb-6 leading-relaxed">
-          To access your dashboard and manage your payment groups, you need to connect your crypto wallet first. This ensures secure and seamless transactions.
+          To access your dashboard and manage your payment groups, you need to
+          connect your crypto wallet first. This ensures secure and seamless
+          transactions.
         </p>
 
         {/* Features List */}
@@ -40,9 +41,7 @@ export default function WalletWarning() {
 
         {/* Instructions */}
         <div className="p-4 bg-cyan-500/10 border border-cyan-500/20 rounded-lg">
-          <p className="text-cyan-300 text-sm">
-            💡 Please connect your wallet
-          </p>
+          <p className="text-cyan-300 text-sm">💡 Please connect your wallet</p>
         </div>
       </div>
     </div>

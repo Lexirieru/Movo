@@ -54,6 +54,7 @@ const routes: RouteDefinition[] = [
     path: "/addBankAccount",
     action: addBankAccount,
   },
+
   {
     method: "post",
     path: "/addWalletAddress",
