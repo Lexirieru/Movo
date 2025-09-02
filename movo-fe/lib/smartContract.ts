@@ -434,3 +434,44 @@ export const getEscrowDetails = async (escrowId: string): Promise<any> => {
     return null;
   }
 };
+
+// Withdraw USDC to Fiat
+export const withdrawUSDCTofiat = async (
+  walletClient: any,
+  escrowId: string,
+  amount: bigint,
+  depositWalletAddress: `0x${string}`,
+): Promise<{ success: boolean; transactionHash?: string; error?: string }> => {
+  try {
+
+    // Kirim tx
+    const hash = await walletClient.writeContract({
+      address: getEscrowAddress("USDC"),
+      abi: escrowUsdcAbi,
+      functionName: "withdrawUSDCTofiat",
+      args: [escrowId, amount, depositWalletAddress],
+    });
+
+    // Tunggu receipt
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+    if (receipt.status === "success") {
+      console.log("✅ Withdraw successful:", receipt);
+      return {
+        success: true,
+        transactionHash: hash,
+      };
+    } else {
+      return {
+        success: false,
+        error: "Transaction failed",
+      };
+    }
+  } catch (error) {
+    console.error("❌ Error withdrawing USDC to fiat:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+};

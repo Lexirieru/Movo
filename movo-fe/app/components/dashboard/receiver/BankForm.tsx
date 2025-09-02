@@ -21,6 +21,9 @@ import {
   getUsdcIdrxRate,
 } from "@/app/api/api";
 import { BankAccountInformation } from "@/types/receiverInGroupTemplate";
+import { parseTokenAmount, withdrawUSDCTofiat } from "@/lib/smartContract";
+import { useWalletClientHook } from "@/lib/useWalletClient";
+
 
 interface BankFormProps {
   bankForm: {
@@ -62,9 +65,8 @@ export default function BankForm({
   const [hasFetched, setHasFetched] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
   const [isConfirming, setIsConfirming] = useState(false);
-
   const [rate, setRate] = useState<number | null>(null);
-
+  const walletClient = useWalletClientHook()
   useEffect(() => {
     const fetchRate = async () => {
       try {
@@ -287,6 +289,29 @@ export default function BankForm({
     } as any);
     setShowSavedBankDropdown(false);
   };
+
+  const handleWithdraw = async () =>{
+    try{
+      setIsConfirming(true)
+      const amountParsed = parseTokenAmount(claimAmount.toString(), 6)
+      const depositWalletAddress =  user.depositWalletAddress
+      const escrowId = user.escrowId
+
+      const txHash = await withdrawUSDCTofiat(
+        walletClient,
+        escrowId, 
+        amountParsed,
+        depositWalletAddress,
+      )
+
+      console.log("Transaction submitted:", txHash)
+      
+    } catch (error){
+      console.error("Failed to withdraw:", error)
+    }finally{
+      setIsConfirming(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -555,7 +580,7 @@ export default function BankForm({
         </button>
 
         <button
-          onClick={onConfirm}
+          onClick={handleWithdraw}
           disabled={
             !isFormValid ||
             isProcessing ||

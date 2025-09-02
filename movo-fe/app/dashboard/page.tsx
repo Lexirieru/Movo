@@ -32,11 +32,11 @@ export default function DashboardPage() {
   const { user, loading, authenticated } = useAuth();
   const { isConnected, address } = useWallet();
 
-  // const [mockAddress, setMockAddress] = useState<string | null>(null);
+  const [mockAddress, setMockAddress] = useState<string | null>(null);
 
-  // const walletAddress = mockAddress || user?.walletAddress || address || null;
+  const walletAddress = mockAddress || user?.walletAddress || address || null;
 
-  const walletAddress = user?.walletAddress || address || null;
+  // const walletAddress = user?.walletAddress || address || null;
 
   // console.log(user,authenticated)
   // Dummy role mapping
@@ -91,7 +91,7 @@ export default function DashboardPage() {
           </Wallet>
 
           {/* Quick Switch (Testing Only) */}
-          {/* <div className="flex items-center gap-3 ml-4">
+          <div className="flex items-center gap-3 ml-4">
             <button
               onClick={() => setMockAddress("0x123...")}
               className="px-3 py-1 bg-blue-600 rounded-md text-sm text-white"
@@ -104,7 +104,7 @@ export default function DashboardPage() {
             >
               📥 Receiver
             </button>
-          </div> */}
+          </div>
         </div>
       </div>
 
