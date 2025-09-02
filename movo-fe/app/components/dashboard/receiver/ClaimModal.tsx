@@ -198,7 +198,11 @@ export default function ClaimModal({
                   </button>
 
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-white/60">Final Amount:</span>
+                    <span className="text-white/60">
+                      {claimType === "crypto"
+                        ? `Total Amount:`
+                        : `Exchange Rate:`}
+                    </span>
                     <span className="text-white/60 text-sm">
                       {selectedStreams.length} stream(s)
                     </span>
@@ -222,13 +226,13 @@ export default function ClaimModal({
                       <div className="text-2xl font-bold text-white">
                         {claimType === "crypto"
                           ? `${netAmount.toFixed(4)} USDC`
-                          : `Rp ${(netAmount * 15850).toLocaleString("id-ID")}`}
+                          : `Rp ${(claimAmount * 15850).toLocaleString("id-ID")}`}
                       </div>
                       <div className="text-white/60 text-sm">
                         {claimType === "crypto"
                           ? "≈ Rp " +
-                            (netAmount * 15850).toLocaleString("id-ID")
-                          : `From ${netAmount.toFixed(4)} USDC (after fees)`}
+                            (claimAmount * 15850).toLocaleString("id-ID")
+                          : `From ${claimAmount.toFixed(4)} USDC (after fees)`}
                       </div>
                     </div>
                   </div>

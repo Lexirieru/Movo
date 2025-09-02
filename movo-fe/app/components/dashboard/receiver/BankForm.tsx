@@ -391,7 +391,7 @@ export default function BankForm({
             <div className="flex justify-between">
               <span className="text-white/70">Claim Amount:</span>
               <span className="text-white font-medium">
-                {claimAmount.toFixed(4)} USDC
+                {(claimAmount * 15850).toLocaleString("id-ID")} IDR
               </span>
             </div>
 
@@ -405,20 +405,35 @@ export default function BankForm({
                 </p>
               </div>
               <span className="text-red-400 font-medium">
-                -{protocolFee.toFixed(4)} USDC
+                -{(protocolFee * 15850).toLocaleString("id-ID")} IDR
               </span>
+            </div>
+
+            {/* Protocol Fee */}
+            <div className="flex justify-between items-start">
+              <div className="text-white/70 max-w-xs">
+                <span className="font-medium">Fiat Fee:</span>
+                <p className="text-xs text-white/50 mt-0.5">
+                  A flat Rp5.000,00 fee from IDRX payment gateway.
+                </p>
+              </div>
+              <span className="text-red-400 font-medium">-5000 IDR</span>
             </div>
 
             {/* Net Amount */}
             <div className="border-t border-white/20 pt-3">
               <div className="flex justify-between items-end font-medium">
-                <span className="text-white">You'll receive:</span>
+                <span className="text-white">You&apos;ll receive:</span>
                 <div className="text-right">
                   <div className="text-green-400 text-lg">
-                    {netAmount.toFixed(4)} USDC
+                    Rp {(netAmount * 15850 - 5000).toLocaleString("id-ID")}
                   </div>
                   <div className="text-green-300 text-xs mt-0.5">
-                    ≈ Rp {(netAmount * 15850).toLocaleString("id-ID")}
+                    ≈{" "}
+                    {((netAmount * 15850 - 5000) / 15850).toLocaleString(
+                      "id-ID",
+                    )}{" "}
+                    USDC
                   </div>
                 </div>
               </div>
