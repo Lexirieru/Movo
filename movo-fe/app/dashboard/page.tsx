@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import SenderDashboard from "../components/dashboard/SenderDashboard";
 import ReceiverDashboard from "../components/dashboard/RecieverDashboard";
+import DashboardWrapper from "../components/dashboard/DashboardWrapper";
 
 // OnchainKit Wallet Components
 import {
@@ -22,12 +23,15 @@ import {
   Name,
 } from "@coinbase/onchainkit/identity";
 import { useAuth } from "@/lib/userContext";
+import { useWallet } from "@/lib/walletContext";
 import GroupDashboard from "../components/dashboard/GroupDashboard";
 import { color } from "@coinbase/onchainkit/theme";
 
 export default function DashboardPage() {
   const { user, loading, authenticated } = useAuth();
+  const { isConnected, address: walletAddress } = useWallet();
   const [address, setAddress] = useState("0x123..."); // default sender
+  
   // console.log(user,authenticated)
   // Dummy role mapping
   const senderAddresses = ["0x123...", "0xabc..."];
@@ -100,13 +104,15 @@ export default function DashboardPage() {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6 relative z-0">
-        {role === "sender" && <GroupDashboard />}
-        {role === "receiver" && <ReceiverDashboard />}
-        {role === "unknown" && (
-          <p className="text-gray-400 text-center mt-20">
-            Wallet not recognized. Please contact admin 🔒
-          </p>
-        )}
+        <DashboardWrapper>
+          {role === "sender" && <GroupDashboard />}
+          {role === "receiver" && <ReceiverDashboard />}
+          {role === "unknown" && (
+            <p className="text-gray-400 text-center mt-20">
+              Wallet not recognized. Please contact admin 🔒
+            </p>
+          )}
+        </DashboardWrapper>
       </div>
     </section>
   );

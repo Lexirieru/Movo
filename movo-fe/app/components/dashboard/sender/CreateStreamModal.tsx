@@ -1,10 +1,20 @@
 "use client";
 import { useState } from "react";
-import { X, Search } from "lucide-react";
-import { ReceiverInGroup, Token } from "@/types/receiverInGroupTemplate";
+import { X, Plus, Trash2, Wallet } from "lucide-react";
+import { ReceiverInGroup } from "@/types/receiverInGroupTemplate";
 import { useAuth } from "@/lib/userContext";
 import { addReceiverToGroup } from "@/app/api/api";
 import { useParams, useRouter } from "next/navigation";
+import { useWalletClientHook } from "@/lib/useWalletClient";
+import { 
+  approveTokens, 
+  createEscrowOnchain, 
+  parseTokenAmount,
+  checkTokenBalance,
+  checkTokenAllowance,
+  getEscrowAddress,
+  getTokenAddress
+} from "@/lib/smartContract";
 
 interface CreateStreamModalProps {
   isOpen: boolean;
@@ -12,42 +22,34 @@ interface CreateStreamModalProps {
   onCreateStream: (stream: ReceiverInGroup) => void;
 }
 
-interface FormData {
-  token: Token | null;
-  receiverAddress: string;
+interface ReceiverData {
+  id: string;
+  address: string;
+  fullname: string;
   amount: string;
 }
 
-// Mock token data untuk demo - dalam implementasi nyata ini akan dari API
-const AVAILABLE_TOKENS: Token[] = [
+interface FormData {
+  token: 'USDC' | 'IDRX' | null;
+  receivers: ReceiverData[];
+}
+
+// Available tokens for escrow
+const AVAILABLE_TOKENS = [
   {
-    address: "0x1234...5678",
-    symbol: "ETH",
-    name: "Ethereum",
-    icon: "⟐",
-    balance: 2.5,
-  },
-  {
-    address: "0xA0b8...1234",
     symbol: "USDC",
-    name: "USD Coin",
+    name: "USD Coin (Base)",
     icon: "💵",
-    balance: 1000,
+    description: "USDC on Base Network",
+    escrowType: "EscrowUSDC"
   },
   {
-    address: "0x5678...9ABC",
-    symbol: "DAI",
-    name: "Dai Stablecoin",
-    icon: "◈",
-    balance: 500,
-  },
-  {
-    address: "0x9ABC...DEF0",
-    symbol: "USDT",
-    name: "Tether USD",
-    icon: "₮",
-    balance: 750,
-  },
+    symbol: "IDRX",
+    name: "IDRX Token (Base)",
+    icon: "🔗",
+    description: "IDRX on Base Network",
+    escrowType: "EscrowIDRX"
+  }
 ];
 
 export default function CreateStreamModal({
@@ -57,41 +59,48 @@ export default function CreateStreamModal({
 }: CreateStreamModalProps) {
   const router = useRouter();
   const params = useParams();
-  const groupId = params.groupId as string; // 👉 "group_1756722469592_8hvygor92"
+  const groupId = params.groupId as string;
   const { user, loading, authenticated } = useAuth();
-  const [step, setStep] = useState(1); // 1: form, 2: token search
+  const walletClient = useWalletClientHook();
   const [formData, setFormData] = useState<FormData>({
     token: null,
-    receiverAddress: "",
-    amount: "",
+    receivers: [{ id: "1", address: "", fullname: "", amount: "" }]
   });
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<Token[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
 
-  const handleTokenSearch = (query: string) => {
-    setSearchQuery(query);
-    if (query.trim()) {
-      // Filter tokens berdasarkan address, symbol, atau name
-      const filtered = AVAILABLE_TOKENS.filter(
-        (token) =>
-          token.name.toLowerCase().includes(query.toLowerCase()) ||
-          token.symbol.toLowerCase().includes(query.toLowerCase()) ||
-          token.name.toLowerCase().includes(query.toLowerCase()),
-      );
-      setSearchResults(filtered);
-    } else {
-      setSearchResults([]);
+  const handleTokenSelect = (token: "USDC" | "IDRX") => {
+    setFormData({ ...formData, token });
+  };
+
+  const addReceiver = () => {
+    const newId = (formData.receivers.length + 1).toString();
+    setFormData({
+      ...formData,
+      receivers: [...formData.receivers, { id: newId, address: "", fullname: "", amount: "" }]
+    });
+  };
+
+  const removeReceiver = (id: string) => {
+    if (formData.receivers.length > 1) {
+      setFormData({
+        ...formData,
+        receivers: formData.receivers.filter(r => r.id !== id)
+      });
     }
   };
 
-  const handleTokenSelect = (token: Token) => {
-    setFormData({ ...formData, token });
-    setStep(1);
-    setSearchQuery("");
-    setSearchResults([]);
+  const updateReceiver = (id: string, field: keyof ReceiverData, value: string) => {
+    setFormData({
+      ...formData,
+      receivers: formData.receivers.map(r => 
+        r.id === id ? { ...r, [field]: value } : r
+      )
+    });
   };
 
   const handleSubmit = async () => {
+<<<<<<< Updated upstream
     if (!formData.token || !formData.receiverAddress || !formData.amount)
       return;
 
@@ -119,22 +128,133 @@ export default function CreateStreamModal({
       onCreateStream(newStream);
     } catch (e) {
       console.log(e);
+=======
+    if (!walletClient) {
+      setMessage({ type: 'error', text: 'Wallet client not ready. Please try reconnecting your wallet.' });
+>>>>>>> Stashed changes
       return;
     }
 
-    onClose();
-    resetForm();
+    // Validate all receivers have data
+    const isValid = formData.receivers.every(r => 
+      r.address.trim() && r.fullname.trim() && r.amount.trim() && parseFloat(r.amount) > 0
+    );
+
+    if (!isValid) {
+      setMessage({ type: 'error', text: 'Please fill in all receiver information and ensure amounts are greater than 0' });
+      return;
+    }
+
+    if (!formData.token) {
+      setMessage({ type: 'error', text: 'Please select a token type' });
+      return;
+    }
+
+    setIsLoading(true);
+    setMessage(null);
+
+    try {
+      // Prepare escrow data for onchain creation
+      const receivers = formData.receivers.map(r => r.address as `0x${string}`);
+      const amounts = formData.receivers.map(r => parseTokenAmount(r.amount, formData.token === 'USDC' ? 6 : 2));
+      const totalAmount = amounts.reduce((acc, amount) => acc + amount, BigInt(0));
+
+      // Debug logging
+      console.log('Escrow data prepared:', {
+        receivers,
+        amounts: amounts.map(a => a.toString()),
+        totalAmount: totalAmount.toString(),
+        tokenType: formData.token
+      });
+
+      // Create escrow onchain first
+      const escrowResult = await createEscrowOnchain(
+        walletClient,
+        formData.token,
+        {
+          receivers,
+          amounts,
+          totalAmount
+        }
+      );
+
+      if (!escrowResult.success) {
+        throw new Error(escrowResult.error || 'Failed to create escrow onchain');
+      }
+
+      // IMPORTANT: Save escrowId to backend to link with group
+      const escrowData = {
+        groupId: groupId,
+        escrowId: escrowResult.escrowId,
+        tokenType: formData.token,
+        senderAddress: walletClient.account.address,
+        totalAmount: totalAmount.toString(),
+        receivers: formData.receivers.map(r => ({
+          address: r.address,
+          fullname: r.fullname,
+          amount: r.amount
+        })),
+        transactionHash: escrowResult.transactionHash,
+        status: 'active',
+        createdAt: new Date().toISOString()
+      };
+
+      // Save escrow data to database to link escrowId with groupId
+      await saveEscrowToDatabase(escrowData);
+
+      // If escrow created successfully onchain, save to backend
+      for (const receiver of formData.receivers) {
+        const addUser = await addReceiverToGroup(
+          user._id,
+          formData.token,
+          formData.token === "USDC" ? "💵" : "🔗",
+          groupId,
+          receiver.address,
+          receiver.amount,
+        );
+
+        const newStream: ReceiverInGroup = {
+          _id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          groupId,
+          originCurrency: formData.token,
+          fullname: receiver.fullname,
+          tokenIcon: formData.token === "USDC" ? "💵" : "🔗",
+          depositWalletAddress: receiver.address,
+          amount: parseFloat(receiver.amount),
+        };
+
+        // Send to parent component
+        onCreateStream(newStream);
+      }
+
+      setMessage({ 
+        type: 'success', 
+        text: `Escrow created successfully onchain! Transaction: ${escrowResult.transactionHash}` 
+      });
+
+      // Close modal after a delay to show success message
+      setTimeout(() => {
+        onClose();
+        resetForm();
+      }, 2000);
+
+    } catch (e) {
+      console.error('Error creating escrow:', e);
+      setMessage({ 
+        type: 'error', 
+        text: e instanceof Error ? e.message : 'Failed to create escrow streams. Please try again.' 
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const resetForm = () => {
     setFormData({
       token: null,
-      receiverAddress: "",
-      amount: "",
+      receivers: [{ id: "1", address: "", fullname: "", amount: "" }]
     });
-    setStep(1);
-    setSearchQuery("");
-    setSearchResults([]);
+    setMessage(null);
   };
 
   const handleClose = () => {
@@ -145,203 +265,155 @@ export default function CreateStreamModal({
   if (!isOpen) return null;
 
   return (
-    <>
-      {/* Token Search Modal */}
-      {step === 2 && (
-        <div className="fixed inset-0 bg-gradient-to-br from-black via-gray-900 to-black z-50 flex flex-col">
-          {/* Header */}
-          <div className="flex justify-between items-center p-6 border-b border-white/10">
-            <h3 className="text-white text-xl font-semibold">Select Token</h3>
-            <button
-              onClick={() => setStep(1)}
-              className="text-gray-400 hover:text-white transition-colors"
-            >
-              <X className="w-6 h-6" />
-            </button>
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-gray-900/95 border border-cyan-400/20 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+        {/* Header */}
+        <div className="flex justify-between items-center p-6 border-b border-white/10">
+          <div>
+            <h3 className="text-white text-xl font-semibold">Create Escrow Streams</h3>
+            <p className="text-white/60 text-sm mt-1">Set up payment streams with smart contract escrow</p>
           </div>
+          <button
+            onClick={handleClose}
+            className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
 
-          {/* Search Input */}
-          <div className="p-6 border-b border-white/10">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search by token address, symbol, or name..."
-                value={searchQuery}
-                onChange={(e) => handleTokenSearch(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all"
-                autoFocus
-              />
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="space-y-6">
+            {/* Token Selection */}
+            <div>
+              <label className="text-white/80 text-sm mb-3 block font-medium">
+                Select Token for Escrow
+              </label>
+              <select
+                value={formData.token || ""}
+                onChange={(e) => handleTokenSelect(e.target.value as "USDC" | "IDRX")}
+                className="w-full p-4 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all"
+              >
+                <option value="" disabled>Choose a token</option>
+                {AVAILABLE_TOKENS.map((token) => (
+                  <option key={token.symbol} value={token.symbol} className="bg-gray-800 text-white">
+                    {token.symbol} - {token.description}
+                  </option>
+                ))}
+              </select>
+              
+              {/* Selected Token Display */}
+              {formData.token && (
+                <div className="mt-3 p-3 bg-cyan-500/10 border border-cyan-500/20 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <div>
+                      <p className="text-cyan-300 font-medium">{formData.token}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
 
-          {/* Search Results */}
-          <div className="flex-1 overflow-y-auto p-6">
-            {searchQuery.trim() === "" ? (
-              <div className="text-center text-gray-400 mt-8">
-                <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Enter token address, symbol, or name to search</p>
+            {/* Receivers */}
+            <div>
+              <div className="flex justify-between items-center mb-3">
+                <label className="text-white/80 text-sm font-medium">Receivers</label>
+                <button
+                  type="button"
+                  onClick={addReceiver}
+                  className="flex items-center space-x-2 px-3 py-1 bg-cyan-500/20 border border-cyan-500/30 rounded-lg text-cyan-300 hover:bg-cyan-500/30 transition-colors text-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Receiver</span>
+                </button>
               </div>
-            ) : searchResults.length === 0 ? (
-              <div className="text-center text-gray-400 mt-8">
-                <p>No tokens found for "{searchQuery}"</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {searchResults.map((token) => (
-                  <button
-                    key={token.name}
-                    onClick={() => handleTokenSelect(token)}
-                    className="w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors flex items-center space-x-4 text-left"
-                  >
-                    <span className="text-3xl">{token.icon}</span>
-                    <div className="flex-1">
-                      <div className="text-white font-medium">
-                        {token.symbol}
-                      </div>
-                      <div className="text-gray-400 text-sm">{token.name}</div>
-                      <div className="text-gray-500 text-xs font-mono">
-                        {token.address}
-                      </div>
+              
+              <div className="space-y-3">
+                {formData.receivers.map((receiver, index) => (
+                  <div key={receiver.id} className="flex items-center space-x-3 p-3 bg-white/5 border border-white/10 rounded-lg">
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <input
+                        type="text"
+                        value={receiver.fullname}
+                        onChange={(e) => updateReceiver(receiver.id, 'fullname', e.target.value)}
+                        placeholder="Full Name"
+                        className="w-full p-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 text-sm"
+                      />
+                      <input
+                        type="text"
+                        value={receiver.address}
+                        onChange={(e) => updateReceiver(receiver.id, 'address', e.target.value)}
+                        placeholder="Wallet Address (0x...)"
+                        className="w-full p-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 text-sm"
+                      />
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={receiver.amount}
+                        onChange={(e) => updateReceiver(receiver.id, 'amount', e.target.value)}
+                        placeholder={`Amount (${formData.token || 'Token'})`}
+                        className="w-full p-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 text-sm"
+                      />
                     </div>
-                    <div className="text-right">
-                      <div className="text-white font-medium">
-                        {token.balance}
-                      </div>
-                      <div className="text-gray-400 text-sm">Balance</div>
-                    </div>
-                  </button>
+                    {formData.receivers.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeReceiver(receiver.id)}
+                        className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 ))}
               </div>
-            )}
-          </div>
-        </div>
-      )}
+            </div>
 
-      {/* Main Form Modal */}
-      {step === 1 && (
-        <div className="fixed inset-0 bg-gradient-to-br from-black via-gray-900 to-black z-40 flex flex-col">
-          <div className="flex justify-between items-center p-6 border-b border-white/10">
-            <h3 className="text-white text-xl font-semibold">
-              Create a Stream
-            </h3>
+            {/* Message Display */}
+            {message && (
+              <div className={`p-4 rounded-lg border ${
+                message.type === 'success' 
+                  ? 'bg-green-500/20 border-green-500/30 text-green-300'
+                  : message.type === 'error'
+                  ? 'bg-red-500/20 border-red-500/30 text-red-300'
+                  : 'bg-blue-500/20 border-blue-500/30 text-blue-300'
+              }`}>
+                <div className="flex items-center space-x-2">
+                  <span>{message.text}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Submit Button */}
             <button
-              onClick={handleClose}
-              className="text-gray-400 hover:text-white transition-colors"
+              type="button"
+              onClick={handleSubmit}
+              disabled={isLoading || !walletClient}
+              className={`w-full py-4 px-6 rounded-xl font-medium transition-all duration-300 flex items-center justify-center space-x-2 ${
+                isLoading || !walletClient
+                  ? 'bg-gray-500/50 text-gray-300 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:shadow-lg hover:shadow-cyan-500/25 hover:scale-105'
+              }`}
             >
-              <X className="w-6 h-6" />
+              {isLoading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <span>Creating Escrow...</span>
+                </>
+              ) : !walletClient ? (
+                <>
+                  <Wallet className="w-5 h-5" />
+                  <span>Wallet client not ready. Please try reconnecting your wallet.</span>
+                </>
+              ) : (
+                <>
+                  <span>Create Escrow Streams</span>
+                </>
+              )}
             </button>
           </div>
-
-          <div className="flex-1 overflow-y-auto p-6">
-            <div className="space-y-6 max-w-lg mx-auto">
-              {/* Token Selection */}
-              <div>
-                <label className="text-white/80 text-sm mb-2 block">
-                  Token
-                </label>
-                <button
-                  onClick={() => setStep(2)}
-                  className="w-full p-4 bg-white/5 border border-white/10 rounded-xl text-left hover:bg-white/10 transition-colors flex items-center justify-between"
-                >
-                  {formData.token ? (
-                    <div className="flex items-center space-x-3">
-                      <span className="text-2xl">{formData.token.icon}</span>
-                      <div>
-                        <div className="text-white font-medium">
-                          {formData.token.symbol}
-                        </div>
-                        <div className="text-gray-400 text-sm">
-                          Balance: {formData.token.balance}
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <span className="text-gray-400">
-                      Search and select a token
-                    </span>
-                  )}
-                  <Search className="w-5 h-5 text-gray-400" />
-                </button>
-              </div>
-
-              {/* Receiver Address */}
-              <div>
-                <label className="text-white/80 text-sm mb-2 block">
-                  Receiver Address
-                </label>
-                <input
-                  type="text"
-                  placeholder="0x..."
-                  value={formData.receiverAddress}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      receiverAddress: e.target.value,
-                    })
-                  }
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all"
-                />
-              </div>
-
-              {/* Amount */}
-              <div>
-                <label className="text-white/80 text-sm mb-2 block">
-                  Total Amount
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="0.0"
-                    value={formData.amount}
-                    onChange={(e) =>
-                      setFormData({ ...formData, amount: e.target.value })
-                    }
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all"
-                  />
-                  {formData.token && (
-                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex items-center space-x-1">
-                      <span className="text-gray-400">
-                        {formData.token.symbol}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                {formData.token &&
-                  formData.amount &&
-                  parseFloat(formData.amount) > formData.token.balance && (
-                    <p className="text-red-400 text-xs mt-1">
-                      Insufficient balance
-                    </p>
-                  )}
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-3 pt-4">
-                <button
-                  onClick={handleClose}
-                  className="flex-1 bg-white/10 text-white py-3 rounded-xl hover:bg-white/20 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={
-                    !formData.token ||
-                    !formData.receiverAddress ||
-                    !formData.amount ||
-                    (formData.token &&
-                      parseFloat(formData.amount) > formData.token.balance)
-                  }
-                  className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-600 text-white py-3 rounded-xl hover:from-cyan-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 disabled:hover:scale-100"
-                >
-                  Create Stream
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
-      )}
-    </>
+      </div>
+    </div>
   );
 }

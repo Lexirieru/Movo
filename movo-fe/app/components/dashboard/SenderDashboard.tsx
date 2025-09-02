@@ -181,11 +181,10 @@ export default function SenderDashboard({
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
             <h2 className="text-3xl font-bold text-white mb-2">
-              Fixed Streams
+              Escrow Streams
             </h2>
             <p className="text-white/60">
-              Start a stream with a fixed start and end date, with automated
-              token distribution.
+              Manage escrow streams with smart contract security for automated token distribution.
             </p>
           </div>
 
@@ -194,7 +193,7 @@ export default function SenderDashboard({
             className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg hover:shadow-cyan-500/25 transition-all duration-300 flex items-center space-x-2 hover:scale-105"
           >
             <Plus className="w-5 h-5" />
-            <span>Create Stream</span>
+            <span>Create Escrow</span>
           </button>
         </div>
 
