@@ -63,9 +63,6 @@ export default function GroupStatsCards({ groups }: GroupStatsCardsProps) {
             <div className="text-2xl font-bold text-white">
               {formattedAmount}
             </div>
-            <div className="text-2xl font-bold text-white">
-              {totalAmount.toFixed(2)}
-            </div>
             <div className="text-white/60 text-sm">Total USDC</div>
           </div>
         </div>
