@@ -16,6 +16,7 @@ import {
   addReceiverToGroup,
   deleteGroup,
   editReceiverAmountInGroup,
+  getEscrowId,
   loadAllGroup,
   loadAllGroupTransactionHistory,
   loadSpecifiedGroup,
@@ -59,6 +60,11 @@ const routes: RouteDefinition[] = [
     method: "post",
     path: "/addWalletAddress",
     action: addWalletAddress,
+  },
+  {
+    method: "post",
+    path: "/getEscrowId",
+    action: getEscrowId,
   },
   {
     method: "post",
