@@ -470,7 +470,7 @@ export default function BankForm({
               <span className="text-white/70">Claim Amount:</span>
               <span className="text-white font-medium">
                 {rate
-                  ? `Rp ${(netAmount * rate - 5000).toLocaleString("id-ID")}`
+                  ? `Rp ${(claimAmount * rate).toLocaleString("id-ID")}`
                   : "Loading..."}
               </span>
             </div>
