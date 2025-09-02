@@ -97,7 +97,6 @@ const UserDataSchema = new Schema(
 );
 
 export const UserModel = mongoose.model("UserData", UserDataSchema);
-
 const GroupOfUserSchema = new Schema(
   {
     escrowId: {
@@ -120,6 +119,24 @@ const GroupOfUserSchema = new Schema(
     senderName: {
       type: String,
       required: true,
+    },
+    // 🔥 Tambahan fields untuk escrow transaction
+    originCurrency: {
+      type: String,
+      enum: ["USDC", "IDRX"],
+      required: false,
+    },
+    totalAmount: {
+      type: String,
+      required: false,
+    },
+    transactionHash: {
+      type: String,
+      required: false,
+    },
+    status: {
+      type: String,
+      required: false,
     },
     Receivers: [
       {
@@ -164,6 +181,27 @@ const GroupOfUserSchema = new Schema(
         },
         amount: {
           type: Number,
+          required: false,
+        },
+        // 🔥 Tambahan fields untuk bank account
+        bankId: {
+          type: String,
+          required: false,
+        },
+        bankName: {
+          type: String,
+          required: false,
+        },
+        bankCode: {
+          type: String,
+          required: false,
+        },
+        bankAccountNumber: {
+          type: String,
+          required: false,
+        },
+        bankAccountName: {
+          type: String,
           required: false,
         },
       },

@@ -1,31 +1,37 @@
-import { createPublicClient, http, parseUnits, getContract, defineChain } from 'viem';
-import { escrowUsdcAbi } from './abis/escrowUsdcAbi';
-import { escrowIdrxAbi } from './abis/escrowIdrxAbi';
-import { usdcAbi } from './abis/usdcAbi';
-import { idrxAbi } from './abis/idrxAbi';
-import { getEscrowAddress, getTokenAddress } from './contractConfig';
+import {
+  createPublicClient,
+  http,
+  parseUnits,
+  getContract,
+  defineChain,
+} from "viem";
+import { escrowUsdcAbi } from "./abis/escrowUsdcAbi";
+import { escrowIdrxAbi } from "./abis/escrowIdrxAbi";
+import { usdcAbi } from "./abis/usdcAbi";
+import { idrxAbi } from "./abis/idrxAbi";
+import { getEscrowAddress, getTokenAddress } from "./contractConfig";
 
 // Define Base Sepolia chain with correct Chain ID
 export const baseSepolia = defineChain({
   id: 84532,
-  name: 'Base Sepolia',
+  name: "Base Sepolia",
   nativeCurrency: {
     decimals: 18,
-    name: 'Ether',
-    symbol: 'ETH',
+    name: "Ether",
+    symbol: "ETH",
   },
   rpcUrls: {
     default: {
-      http: ['https://sepolia.base.org'],
+      http: ["https://sepolia.base.org"],
     },
     public: {
-      http: ['https://sepolia.base.org'],
+      http: ["https://sepolia.base.org"],
     },
   },
   blockExplorers: {
     default: {
-      name: 'Base Sepolia Explorer',
-      url: 'https://sepolia.basescan.org',
+      name: "Base Sepolia Explorer",
+      url: "https://sepolia.basescan.org",
     },
   },
 });
@@ -33,36 +39,36 @@ export const baseSepolia = defineChain({
 // Public client for reading blockchain data
 export const publicClient = createPublicClient({
   chain: baseSepolia,
-  transport: http()
+  transport: http(),
 });
 
 // Debug: Log the chain configuration
-console.log('Public client configured with chain:', {
+console.log("Public client configured with chain:", {
   id: baseSepolia.id,
-  name: baseSepolia.name
+  name: baseSepolia.name,
 });
 
 // Smart contract instances
 export const escrowUsdcContract = getContract({
-  address: getEscrowAddress('USDC') as `0x${string}`,
+  address: getEscrowAddress("USDC") as `0x${string}`,
   abi: escrowUsdcAbi,
   client: publicClient,
 });
 
 export const escrowIdrxContract = getContract({
-  address: getEscrowAddress('IDRX') as `0x${string}`,
+  address: getEscrowAddress("IDRX") as `0x${string}`,
   abi: escrowIdrxAbi,
   client: publicClient,
 });
 
 export const usdcContract = getContract({
-  address: getTokenAddress('USDC') as `0x${string}`,
+  address: getTokenAddress("USDC") as `0x${string}`,
   abi: usdcAbi,
   client: publicClient,
 });
 
 export const idrxContract = getContract({
-  address: getTokenAddress('IDRX') as `0x${string}`,
+  address: getTokenAddress("IDRX") as `0x${string}`,
   abi: idrxAbi,
   client: publicClient,
 });
@@ -103,16 +109,16 @@ export interface ReceiverDetails {
 
 export interface EscrowInfo {
   escrowId: string;
-  tokenType: 'USDC' | 'IDRX';
+  tokenType: "USDC" | "IDRX";
   escrowRoom: EscrowRoomDetails;
   receivers: ReceiverDetails[];
   totalReceivers: number;
 }
 
-export interface AddReceiverResult{
-  success: boolean
-  transactionHash?: string
-  error?: string
+export interface AddReceiverResult {
+  success: boolean;
+  transactionHash?: string;
+  error?: string;
 }
 
 // Utility functions
@@ -120,48 +126,60 @@ export const generateEscrowId = (sender: string, timestamp: number): string => {
   return `escrow_${sender}_${timestamp}`;
 };
 
-export const parseTokenAmount = (amount: string, decimals: number = 6): bigint => {
+export const parseTokenAmount = (
+  amount: string,
+  decimals: number = 6,
+): bigint => {
   console.log(`Parsing amount: ${amount} with ${decimals} decimals`);
   const result = parseUnits(amount, decimals);
   console.log(`Parsed result: ${result.toString()}`);
   return result;
 };
 
-export const formatTokenAmount = (amount: bigint, decimals: number = 6): string => {
+export const formatTokenAmount = (
+  amount: bigint,
+  decimals: number = 6,
+): string => {
   return (Number(amount) / Math.pow(10, decimals)).toString();
 };
 
 // Check token balance
 export const checkTokenBalance = async (
-  tokenType: 'USDC' | 'IDRX',
-  userAddress: string
+  tokenType: "USDC" | "IDRX",
+  userAddress: string,
 ): Promise<bigint> => {
   try {
-    if (tokenType === 'USDC') {
+    if (tokenType === "USDC") {
       return await usdcContract.read.balanceOf([userAddress as `0x${string}`]);
     } else {
       return await idrxContract.read.balanceOf([userAddress as `0x${string}`]);
     }
   } catch (error) {
-    console.error('Error checking token balance:', error);
+    console.error("Error checking token balance:", error);
     return BigInt(0);
   }
 };
 
 // Check token allowance
 export const checkTokenAllowance = async (
-  tokenType: 'USDC' | 'IDRX',
+  tokenType: "USDC" | "IDRX",
   owner: string,
-  spender: string
+  spender: string,
 ): Promise<bigint> => {
   try {
-    if (tokenType === 'USDC') {
-      return await usdcContract.read.allowance([owner as `0x${string}`, spender as `0x${string}`]);
+    if (tokenType === "USDC") {
+      return await usdcContract.read.allowance([
+        owner as `0x${string}`,
+        spender as `0x${string}`,
+      ]);
     } else {
-      return await idrxContract.read.allowance([owner as `0x${string}`, spender as `0x${string}`]);
+      return await idrxContract.read.allowance([
+        owner as `0x${string}`,
+        spender as `0x${string}`,
+      ]);
     }
   } catch (error) {
-    console.error('Error checking token allowance:', error);
+    console.error("Error checking token allowance:", error);
     return BigInt(0);
   }
 };
@@ -169,28 +187,31 @@ export const checkTokenAllowance = async (
 // Approve tokens for escrow contract
 export const approveTokens = async (
   walletClient: any,
-  tokenType: 'USDC' | 'IDRX',
+  tokenType: "USDC" | "IDRX",
   spender: string,
-  amount: bigint
+  amount: bigint,
 ): Promise<boolean> => {
   try {
     let contract;
-    if (tokenType === 'USDC') {
+    if (tokenType === "USDC") {
       contract = usdcContract;
     } else {
       contract = idrxContract;
     }
 
-    const { request } = await contract.simulate.approve([spender as `0x${string}`, amount], {
-      account: walletClient.account.address,
-    });
+    const { request } = await contract.simulate.approve(
+      [spender as `0x${string}`, amount],
+      {
+        account: walletClient.account.address,
+      },
+    );
 
     const hash = await walletClient.writeContract(request);
     await publicClient.waitForTransactionReceipt({ hash });
-    
+
     return true;
   } catch (error) {
-    console.error('Error approving tokens:', error);
+    console.error("Error approving tokens:", error);
     return false;
   }
 };
@@ -199,16 +220,19 @@ export const approveTokens = async (
 export const verifyNetwork = async (walletClient: any): Promise<boolean> => {
   try {
     const chainId = await walletClient.getChainId();
-    console.log('Current wallet chain ID:', chainId);
-    console.log('Expected chain ID:', baseSepolia.id);
-    
+    console.log(chainId);
+    console.log("Current wallet chain ID:", chainId);
+    console.log("Expected chain ID:", baseSepolia.id);
+
     if (chainId !== baseSepolia.id) {
-      console.error(`Network mismatch! Expected ${baseSepolia.id} (Base Sepolia), got ${chainId}`);
+      console.error(
+        `Network mismatch! Expected ${baseSepolia.id} (Base Sepolia), got ${chainId}`,
+      );
       return false;
     }
     return true;
   } catch (error) {
-    console.error('Error verifying network:', error);
+    console.error("Error verifying network:", error);
     return false;
   }
 };
@@ -216,79 +240,87 @@ export const verifyNetwork = async (walletClient: any): Promise<boolean> => {
 // Create escrow onchain
 export const createEscrowOnchain = async (
   walletClient: any,
-  tokenType: 'USDC' | 'IDRX',
-  escrowData: EscrowData
+  tokenType: "USDC" | "IDRX",
+  escrowData: EscrowData,
 ): Promise<CreateEscrowResult> => {
   try {
     // Verify network first
     const isCorrectNetwork = await verifyNetwork(walletClient);
     if (!isCorrectNetwork) {
-      throw new Error(`Please switch to Base Sepolia network (Chain ID: ${baseSepolia.id})`);
+      throw new Error(
+        `Please switch to Base Sepolia network (Chain ID: ${baseSepolia.id})`,
+      );
     }
 
     const escrowId = generateEscrowId(walletClient.account.address, Date.now());
     const escrowIdBytes = `0x${escrowId}` as `0x${string}`;
-    
+
     let contract;
-    if (tokenType === 'USDC') {
+    if (tokenType === "USDC") {
       contract = escrowUsdcContract;
     } else {
       contract = escrowIdrxContract;
     }
 
     // Debug logging
-    console.log('Creating escrow with:', {
+    console.log("Creating escrow with:", {
       tokenType,
       contractAddress: contract.address,
       receivers: escrowData.receivers,
-      amounts: escrowData.amounts.map(a => a.toString()),
-      sender: walletClient.account.address
+      amounts: escrowData.amounts.map((a) => a.toString()),
+      sender: walletClient.account.address,
     });
 
     // Verify contract has the function
     try {
-      const contractCode = await publicClient.getBytecode({ address: contract.address });
-      if (!contractCode || contractCode === '0x') {
-        throw new Error(`No contract found at address ${contract.address}. Please check if the contract is deployed on Base Sepolia.`);
+      const contractCode = await publicClient.getBytecode({
+        address: contract.address,
+      });
+      if (!contractCode || contractCode === "0x") {
+        throw new Error(
+          `No contract found at address ${contract.address}. Please check if the contract is deployed on Base Sepolia.`,
+        );
       }
-      console.log('✅ Contract code found at address:', contract.address);
+      console.log("✅ Contract code found at address:", contract.address);
     } catch (error) {
-      console.error('Error checking contract code:', error);
-      throw new Error(`Contract not found at address ${contract.address}. Please check if the contract is deployed on Base Sepolia.`);
+      console.error("Error checking contract code:", error);
+      throw new Error(
+        `Contract not found at address ${contract.address}. Please check if the contract is deployed on Base Sepolia.`,
+      );
     }
 
     // Log the exact parameters being sent to the contract
-    console.log('📋 Contract call parameters:', {
-      function: 'createEscrow',
+    console.log("📋 Contract call parameters:", {
+      function: "createEscrow",
       receivers: escrowData.receivers,
-      amounts: escrowData.amounts.map(a => a.toString()),
-      sender: walletClient.account.address
+      amounts: escrowData.amounts.map((a) => a.toString()),
+      sender: walletClient.account.address,
     });
 
     const { request } = await contract.simulate.createEscrow(
       [escrowData.receivers, escrowData.amounts],
       {
         account: walletClient.account.address,
-      }
+      },
     );
 
-    console.log('✅ Simulation successful, executing transaction...');
+    console.log("✅ Simulation successful, executing transaction...");
     const hash = await walletClient.writeContract(request);
-    console.log('📝 Transaction submitted:', hash);
-    
+    console.log("📝 Transaction submitted:", hash);
+
     const receipt = await publicClient.waitForTransactionReceipt({ hash });
-    console.log('✅ Transaction confirmed:', receipt);
-    
+    console.log("✅ Transaction confirmed:", receipt);
+
     return {
       success: true,
       escrowId,
       transactionHash: hash,
     };
   } catch (error) {
-    console.error('❌ Error creating escrow:', error);
+    console.error("❌ Error creating escrow:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 };
@@ -298,48 +330,48 @@ export async function addReceiver(
   tokenType: "USDC" | "IDRX",
   escrowId: string,
   receiverAddress: `0x${string}`,
-  amount: bigint
-): Promise<AddReceiverResult>{
-  try{
+  amount: bigint,
+): Promise<AddReceiverResult> {
+  try {
     console.log("Adding receiver to escrow:", {
       tokenType,
       escrowId,
       receiverAddress,
       amount: amount.toString(),
-    })
+    });
 
-    const contractAddress = tokenType == "USDC" 
-      ? escrowUsdcContract : escrowIdrxContract
-    
+    const contractAddress =
+      tokenType == "USDC" ? escrowUsdcContract : escrowIdrxContract;
+
     const txHash = await walletClient.writeContract({
       address: contractAddress,
       abi: escrowUsdcAbi || escrowIdrxAbi,
       functionName: "addReceiver",
       args: [escrowId, receiverAddress, amount],
-    })
+    });
 
-      console.log("Add receiver transaction sent: ", txHash)
+    console.log("Add receiver transaction sent: ", txHash);
 
-      const receipt = await walletClient.waitForTransactionReceipt(txHash)
+    const receipt = await walletClient.waitForTransactionReceipt(txHash);
 
-      if(receipt.status == "success"){
-        console.log("Receiver added successfully:", receipt)
-        return{
-          success: true,
-          transactionHash: txHash
-        }
-      }else{
-        return{
-          success: false,
-          error: "Transaction failed",
-        }
-      }
-  } catch (error){
-    console.error("Error adding receiver to escrow:", error)
-    return{
-      success: false,
-      error: error instanceof Error? error.message: "Unknown error occured",
+    if (receipt.status == "success") {
+      console.log("Receiver added successfully:", receipt);
+      return {
+        success: true,
+        transactionHash: txHash,
+      };
+    } else {
+      return {
+        success: false,
+        error: "Transaction failed",
+      };
     }
+  } catch (error) {
+    console.error("Error adding receiver to escrow:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occured",
+    };
   }
 }
 
@@ -348,11 +380,11 @@ export const topUpFunds = async (
   walletClient: any,
   escrowId: string,
   amount: bigint,
-  tokenType: 'USDC' | 'IDRX'
+  tokenType: "USDC" | "IDRX",
 ): Promise<{ success: boolean; transactionHash?: string; error?: string }> => {
   try {
     let contract;
-    if (tokenType === 'USDC') {
+    if (tokenType === "USDC") {
       contract = escrowUsdcContract;
     } else {
       contract = escrowIdrxContract;
@@ -362,21 +394,21 @@ export const topUpFunds = async (
       [escrowId as `0x${string}`, amount],
       {
         account: walletClient.account.address,
-      }
+      },
     );
 
     const hash = await walletClient.writeContract(request);
     const receipt = await publicClient.waitForTransactionReceipt({ hash });
-    
+
     return {
       success: true,
       transactionHash: hash,
     };
   } catch (error) {
-    console.error('Error topping up funds:', error);
+    console.error("Error topping up funds:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 };
@@ -386,15 +418,19 @@ export const getEscrowDetails = async (escrowId: string): Promise<any> => {
   try {
     // Try USDC escrow first
     try {
-      const usdcEscrow = await escrowUsdcContract.read.getEscrowDetails([escrowId as `0x${string}`]);
-      return { ...usdcEscrow, tokenType: 'USDC' };
+      const usdcEscrow = await escrowUsdcContract.read.getEscrowDetails([
+        escrowId as `0x${string}`,
+      ]);
+      return { ...usdcEscrow, tokenType: "USDC" };
     } catch {
       // Try IDRX escrow
-      const idrxEscrow = await escrowIdrxContract.read.getEscrowDetails([escrowId as `0x${string}`]);
-      return { ...idrxEscrow, tokenType: 'IDRX' };
+      const idrxEscrow = await escrowIdrxContract.read.getEscrowDetails([
+        escrowId as `0x${string}`,
+      ]);
+      return { ...idrxEscrow, tokenType: "IDRX" };
     }
   } catch (error) {
-    console.error('Error getting escrow details:', error);
+    console.error("Error getting escrow details:", error);
     return null;
   }
 };

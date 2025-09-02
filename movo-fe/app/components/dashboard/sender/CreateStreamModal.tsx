@@ -253,8 +253,8 @@ export default function CreateStreamModal({
         const escrowData = {
           groupId: groupId,
           escrowId: escrowResult.escrowId ?? "",
-          tokenType: formData.token,
-          senderAddress: walletClient.account.address,
+          originCurrency: formData.token,
+          walletAddress: walletClient.account.address,
           totalAmount: totalAmount.toString(),
           receivers: formData.receivers.map((r) => ({
             address: r.address,

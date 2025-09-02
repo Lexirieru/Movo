@@ -137,6 +137,34 @@ export const addReceiverToGroup = async (
   }
 };
 
+export const saveEscrowToDatabase = async (escrowData: {
+  groupId: string;
+  escrowId: string;
+  originCurrency: "USDC" | "IDRX";
+  walletAddress: string;
+  totalAmount: string;
+  receivers: Array<{
+    address: string;
+    fullname: string;
+    amount: string;
+  }>;
+  transactionHash: string;
+  status: string;
+  createdAt: string;
+}) => {
+  try {
+    const response = await axios.post(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/saveEscrowToDatabase`,
+      escrowData,
+    );
+    console.log(response.data);
+    return response.data;
+  } catch (error) {
+    console.error("Error saving escrow to database:", error);
+    throw error;
+  }
+};
+
 export const loadAllWithdrawHistory = async (_id: string) => {
   try {
     const response = await api.post("/loadAllWithdrawHistory", { _id });
@@ -271,35 +299,6 @@ export const getUsdcIdrxRate = async () => {
 export const logout = async () => {
   const response = await api.post("/logout"); // backend akan hapus cookie
   return response.data.message;
-};
-
-// Save escrow data to database to link escrowId with groupId
-export const saveEscrowToDatabase = async (escrowData: {
-  groupId: string;
-  escrowId: string;
-  tokenType: "USDC" | "IDRX";
-  senderAddress: string;
-  totalAmount: string;
-  receivers: Array<{
-    address: string;
-    fullname: string;
-    amount: string;
-  }>;
-  transactionHash: string;
-  status: string;
-  createdAt: string;
-}) => {
-  try {
-    const response = await axios.post(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/escrows`,
-      escrowData,
-    );
-    console.log(response.data);
-    return response.data;
-  } catch (error) {
-    console.error("Error saving escrow to database:", error);
-    throw error;
-  }
 };
 
 // Get escrow by groupId

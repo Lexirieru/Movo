@@ -57,93 +57,57 @@ export async function addGroup(req: Request, res: Response) {
 
 // untuk ngeadd receiver ke suatu grup lewat depositwalletaddress dia
 // untuk ngeadd receiver ke suatu grup lewat depositWalletAddress + sekalian nambahin amount
-export async function addReceiverToGroup(req: Request, res: Response) {
+export async function saveEscrowToDatabase(req: Request, res: Response) {
   const {
-    senderId,
-    originCurrency,
-    tokenIcon,
     groupId,
+    escrowId,
+    originCurrency,
     walletAddress,
-    amount,
+    totalAmount,
+    receivers,
+    transactionHash,
+    status,
+    createdAt,
   } = req.body;
 
-  if (!walletAddress || !amount) {
-    res.status(400).json({
-      message: "Wallet Address and amount are required",
-    });
-    return;
-  }
-
-  const groupData = await GroupOfUserModel.findOne({ groupId });
-  if (!groupData) {
-    res.status(404).json({ message: "Group not found" });
-    return;
-  }
-
-  if (groupData.senderId.toString() !== senderId) {
-    res
-      .status(403)
-      .json({ message: "You are not authorized to modify this group" });
-    return;
-  }
-
   try {
-    const userData = await UserModel.findOne({ walletAddress });
-    if (!userData) {
-      res.status(404).json({
-        message: "User not found with the provided wallet address",
-      });
-      return;
-    }
-
-    const addReceiverToGroup = await GroupOfUserModel.findOneAndUpdate(
+    // Update group dengan escrow information
+    const updatedGroup = await GroupOfUserModel.findOneAndUpdate(
       { groupId },
-      [
-        {
-          $set: {
-            Receivers: {
-              $concatArrays: [
-                "$Receivers",
-                [
-                  {
-                    _id: userData._id,
-                    email: userData.email,
-                    fullname: userData.fullname,
-                    apiKey: userData.apiKey,
-                    secretKey: userData.secretKey,
-                    depositWalletAddress: userData.depositWalletAddress,
-                    walletAddress: userData.walletAddress,
-                    originCurrency,
-                    tokenIcon,
-                    amount,
-                  },
-                ],
-              ],
-            },
-          },
+      {
+        $set: {
+          escrowId,
+          originCurrency,
+          totalAmount,
+          transactionHash,
+          status,
+          // Update receivers dengan bank account info jika ada
+          Receivers: receivers.map((receiver: any) => ({
+            ...receiver,
+            // Keep existing bank account info if available
+            bankId: receiver.bankId,
+            bankName: receiver.bankName,
+            bankCode: receiver.bankCode,
+            bankAccountNumber: receiver.bankAccountNumber,
+            bankAccountName: receiver.bankAccountName,
+          })),
         },
-        {
-          $set: {
-            totalRecipients: { $size: "$Receivers" },
-          },
-        },
-      ],
+      },
       { new: true }
     );
-    console.log();
 
-    if (!addReceiverToGroup) {
+    if (!updatedGroup) {
       res.status(404).json({ message: "Group not found" });
       return;
     }
 
     res.status(201).json({
-      message: "Receiver successfully added to group with amount",
-      data: userData,
+      message: "Escrow saved successfully",
+      data: updatedGroup,
     });
   } catch (err: any) {
     res.status(500).json({
-      message: "Error adding receiver to group",
+      message: "Error saving escrow to database",
       error: err.message,
     });
   }

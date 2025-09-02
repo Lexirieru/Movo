@@ -108,7 +108,6 @@ const WithdrawHistorySchema = new Schema(
     withdrawId: {
       type: String,
       required: false,
-      unique: true,
     },
     receiverId: {
       type: String,

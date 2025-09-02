@@ -13,7 +13,7 @@ import {
 import express, { RequestHandler } from "express";
 import {
   addGroup,
-  addReceiverToGroup,
+  saveEscrowToDatabase,
   deleteGroup,
   editReceiverAmountInGroup,
   getEscrowId,
@@ -95,8 +95,8 @@ const routes: RouteDefinition[] = [
   // userSenderController
   {
     method: "post",
-    path: "/addReceiverToGroup",
-    action: addReceiverToGroup,
+    path: "/saveEscrowToDatabase",
+    action: saveEscrowToDatabase,
   },
   {
     method: "post",

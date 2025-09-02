@@ -1,15 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, DollarSign, Wallet, AlertCircle, CheckCircle, RefreshCw } from "lucide-react";
+import {
+  X,
+  DollarSign,
+  Wallet,
+  AlertCircle,
+  CheckCircle,
+  RefreshCw,
+} from "lucide-react";
 import { useWalletClientHook } from "@/lib/useWalletClient";
 import { useWallet } from "@/lib/walletContext";
 import { getEscrowByGroupId } from "@/app/api/api";
-import { 
+import {
   topUpFunds,
   checkTokenBalance,
   checkTokenAllowance,
-  approveTokens
+  approveTokens,
 } from "@/lib/smartContract";
 import { formatTokenAmount, parseTokenAmount } from "@/lib/smartContract";
 
@@ -27,11 +34,14 @@ export default function TopupFundModal({
   const walletClient = useWalletClientHook();
   const { isConnected, address } = useWallet();
   const [escrowData, setEscrowData] = useState<any>(null);
-  const [topupAmount, setTopupAmount] = useState<string>('');
+  const [topupAmount, setTopupAmount] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
-  const [tokenBalance, setTokenBalance] = useState<string>('0');
-  const [tokenAllowance, setTokenAllowance] = useState<string>('0');
+  const [message, setMessage] = useState<{
+    type: "success" | "error" | "info";
+    text: string;
+  } | null>(null);
+  const [tokenBalance, setTokenBalance] = useState<string>("0");
+  const [tokenAllowance, setTokenAllowance] = useState<string>("0");
 
   // Load escrow data when modal opens
   useEffect(() => {
@@ -52,8 +62,11 @@ export default function TopupFundModal({
       const data = await getEscrowByGroupId(groupId);
       setEscrowData(data);
     } catch (error) {
-      console.error('Error loading escrow data:', error);
-      setMessage({ type: 'error', text: 'Failed to load escrow data. Please try again.' });
+      console.error("Error loading escrow data:", error);
+      setMessage({
+        type: "error",
+        text: "Failed to load escrow data. Please try again.",
+      });
     }
   };
 
@@ -61,36 +74,49 @@ export default function TopupFundModal({
     try {
       const balance = await checkTokenBalance(escrowData.tokenType, address!);
       const allowance = await checkTokenAllowance(
-        escrowData.tokenType, 
-        address!, 
-        escrowData.escrowId
+        escrowData.tokenType,
+        address!,
+        escrowData.escrowId,
       );
-      
-      setTokenBalance(formatTokenAmount(balance, escrowData.tokenType === 'USDC' ? 6 : 2));
-      setTokenAllowance(formatTokenAmount(allowance, escrowData.tokenType === 'USDC' ? 6 : 2));
+
+      setTokenBalance(
+        formatTokenAmount(balance, escrowData.tokenType === "USDC" ? 6 : 2),
+      );
+      setTokenAllowance(
+        formatTokenAmount(allowance, escrowData.tokenType === "USDC" ? 6 : 2),
+      );
     } catch (error) {
-      console.error('Error checking token info:', error);
+      console.error("Error checking token info:", error);
     }
   };
 
   const handleTopup = async () => {
     if (!walletClient) {
-      setMessage({ type: 'error', text: 'Wallet client not ready. Please try reconnecting your wallet.' });
+      setMessage({
+        type: "error",
+        text: "Wallet client not ready. Please try reconnecting your wallet.",
+      });
       return;
     }
 
     if (!isConnected || !address) {
-      setMessage({ type: 'error', text: 'Please connect your wallet first.' });
+      setMessage({ type: "error", text: "Please connect your wallet first." });
       return;
     }
 
     if (!topupAmount.trim() || parseFloat(topupAmount) <= 0) {
-      setMessage({ type: 'error', text: 'Please enter a valid amount greater than 0.' });
+      setMessage({
+        type: "error",
+        text: "Please enter a valid amount greater than 0.",
+      });
       return;
     }
 
     if (!escrowData) {
-      setMessage({ type: 'error', text: 'Escrow data not found. Please try again.' });
+      setMessage({
+        type: "error",
+        text: "Escrow data not found. Please try again.",
+      });
       return;
     }
 
@@ -98,27 +124,39 @@ export default function TopupFundModal({
     setMessage(null);
 
     try {
-      const parsedAmount = parseTokenAmount(topupAmount, escrowData.tokenType === 'USDC' ? 6 : 2);
-      
+      const parsedAmount = parseTokenAmount(
+        topupAmount,
+        escrowData.tokenType === "USDC" ? 6 : 2,
+      );
+
       // Check if user has enough balance
-      const userBalance = await checkTokenBalance(escrowData.tokenType, address);
+      const userBalance = await checkTokenBalance(
+        escrowData.tokenType,
+        address,
+      );
       if (userBalance < parsedAmount) {
-        throw new Error(`Insufficient balance. You have ${formatTokenAmount(userBalance, escrowData.tokenType === 'USDC' ? 6 : 2)} ${escrowData.tokenType}`);
+        throw new Error(
+          `Insufficient balance. You have ${formatTokenAmount(userBalance, escrowData.tokenType === "USDC" ? 6 : 2)} ${escrowData.tokenType}`,
+        );
       }
 
       // Check if approval is needed
-      const currentAllowance = await checkTokenAllowance(escrowData.tokenType, address, escrowData.escrowId);
+      const currentAllowance = await checkTokenAllowance(
+        escrowData.tokenType,
+        address,
+        escrowData.escrowId,
+      );
       if (currentAllowance < parsedAmount) {
         // Need to approve first
         const approvalSuccess = await approveTokens(
           walletClient,
           escrowData.tokenType,
           escrowData.escrowId,
-          parsedAmount
+          parsedAmount,
         );
-        
+
         if (!approvalSuccess) {
-          throw new Error('Failed to approve tokens for escrow contract');
+          throw new Error("Failed to approve tokens for escrow contract");
         }
       }
 
@@ -127,29 +165,32 @@ export default function TopupFundModal({
         walletClient,
         escrowData.escrowId,
         parsedAmount,
-        escrowData.tokenType
+        escrowData.tokenType,
       );
 
       if (result.success) {
-        setMessage({ 
-          type: 'success', 
-          text: `Topup successful! Added ${topupAmount} ${escrowData.tokenType} to escrow. Transaction: ${result.transactionHash}` 
+        setMessage({
+          type: "success",
+          text: `Topup successful! Added ${topupAmount} ${escrowData.tokenType} to escrow. Transaction: ${result.transactionHash}`,
         });
-        
+
         // Reset form and refresh data
-        setTopupAmount('');
+        setTopupAmount("");
         setTimeout(() => {
           loadEscrowData();
           checkTokenInfo();
         }, 2000);
       } else {
-        throw new Error(result.error || 'Failed to topup funds');
+        throw new Error(result.error || "Failed to topup funds");
       }
     } catch (error) {
-      console.error('Error topping up funds:', error);
-      setMessage({ 
-        type: 'error', 
-        text: error instanceof Error ? error.message : 'Failed to topup funds. Please try again.' 
+      console.error("Error topping up funds:", error);
+      setMessage({
+        type: "error",
+        text:
+          error instanceof Error
+            ? error.message
+            : "Failed to topup funds. Please try again.",
       });
     } finally {
       setIsLoading(false);
@@ -157,7 +198,7 @@ export default function TopupFundModal({
   };
 
   const handleClose = () => {
-    setTopupAmount('');
+    setTopupAmount("");
     setMessage(null);
     onClose();
   };
@@ -170,8 +211,12 @@ export default function TopupFundModal({
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-white/10">
           <div>
-            <h3 className="text-white text-xl font-semibold">Topup Fund to Escrow</h3>
-            <p className="text-white/60 text-sm mt-1">Add funds to your escrow for receiver withdrawals</p>
+            <h3 className="text-white text-xl font-semibold">
+              Topup Fund to Escrow
+            </h3>
+            <p className="text-white/60 text-sm mt-1">
+              Add funds to your escrow for receiver withdrawals
+            </p>
           </div>
           <button
             onClick={handleClose}
@@ -188,7 +233,9 @@ export default function TopupFundModal({
               <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-6">
                 <div className="flex items-center space-x-3 text-yellow-300 mb-4">
                   <AlertCircle className="w-5 h-5" />
-                  <span className="font-medium">No escrow found for this group</span>
+                  <span className="font-medium">
+                    No escrow found for this group
+                  </span>
                 </div>
                 <div className="p-4 bg-white/5 rounded-lg">
                   <p className="text-white/60 text-sm mb-3">
@@ -211,35 +258,43 @@ export default function TopupFundModal({
             )}
 
             {/* Escrow Information - Only show if escrow exists */}
-            {escrowData && (
-              <div className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 rounded-xl p-4">
-                <h4 className="text-cyan-300 font-medium mb-3">Escrow Details</h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-white/60">Token Type</p>
-                    <p className="text-white font-medium">{escrowData.tokenType}</p>
-                  </div>
-                  <div>
-                    <p className="text-white/60">Escrow ID</p>
-                    <p className="text-white font-mono text-xs break-all">{escrowData.escrowId}</p>
-                  </div>
-                  <div>
-                    <p className="text-white/60">Total Allocated</p>
-                    <p className="text-white font-medium">{escrowData.totalAmount} {escrowData.tokenType}</p>
-                  </div>
-                  <div>
-                    <p className="text-white/60">Receivers</p>
-                    <p className="text-white font-medium">{escrowData.receivers.length} addresses</p>
-                  </div>
+            {/* {escrowData && ( */}
+            <div className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 rounded-xl p-4">
+              <h4 className="text-cyan-300 font-medium mb-3">Escrow Details</h4>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-white/60">Token Type</p>
+                  <p className="text-white font-medium">
+                    {escrowData.tokenType}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-white/60">Escrow ID</p>
+                  <p className="text-white font-mono text-xs break-all">
+                    {escrowData.escrowId}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-white/60">Total Allocated</p>
+                  <p className="text-white font-medium">
+                    {escrowData.totalAmount} {escrowData.tokenType}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-white/60">Receivers</p>
+                  <p className="text-white font-medium">
+                    {escrowData.receivers.length} addresses
+                  </p>
                 </div>
               </div>
-            )}
+            </div>
+            {/* )} */}
 
             {/* Topup Amount Input - Only show if escrow exists */}
             {escrowData && (
               <div>
                 <label className="block text-white/80 text-sm font-medium mb-2">
-                  Topup Amount ({escrowData?.tokenType || 'Token'})
+                  Topup Amount ({escrowData?.tokenType || "Token"})
                 </label>
                 <div className="relative">
                   <input
@@ -253,7 +308,7 @@ export default function TopupFundModal({
                     disabled={isLoading}
                   />
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/60 text-sm">
-                    {escrowData?.tokenType || 'Token'}
+                    {escrowData?.tokenType || "Token"}
                   </div>
                 </div>
               </div>
@@ -264,27 +319,37 @@ export default function TopupFundModal({
               <div className="grid grid-cols-2 gap-4 p-4 bg-white/5 border border-white/10 rounded-lg">
                 <div>
                   <p className="text-white/60 text-xs mb-1">Your Balance</p>
-                  <p className="text-white font-medium">{tokenBalance} {escrowData.tokenType}</p>
+                  <p className="text-white font-medium">
+                    {tokenBalance} {escrowData.tokenType}
+                  </p>
                 </div>
                 <div>
                   <p className="text-white/60 text-xs mb-1">Allowance</p>
-                  <p className="text-white font-medium">{tokenAllowance} {escrowData.tokenType}</p>
+                  <p className="text-white font-medium">
+                    {tokenAllowance} {escrowData.tokenType}
+                  </p>
                 </div>
               </div>
             )}
 
             {/* Message Display */}
             {message && (
-              <div className={`p-4 rounded-lg border ${
-                message.type === 'success' 
-                  ? 'bg-green-500/20 border-green-500/30 text-green-300'
-                  : message.type === 'error'
-                  ? 'bg-red-500/20 border-red-500/30 text-red-300'
-                  : 'bg-blue-500/20 border-blue-500/30 text-blue-300'
-              }`}>
+              <div
+                className={`p-4 rounded-lg border ${
+                  message.type === "success"
+                    ? "bg-green-500/20 border-green-500/30 text-green-300"
+                    : message.type === "error"
+                      ? "bg-red-500/20 border-red-500/30 text-red-300"
+                      : "bg-blue-500/20 border-blue-500/30 text-blue-300"
+                }`}
+              >
                 <div className="flex items-center space-x-2">
-                  {message.type === 'success' && <CheckCircle className="w-5 h-5" />}
-                  {message.type === 'error' && <AlertCircle className="w-5 h-5" />}
+                  {message.type === "success" && (
+                    <CheckCircle className="w-5 h-5" />
+                  )}
+                  {message.type === "error" && (
+                    <AlertCircle className="w-5 h-5" />
+                  )}
                   <span>{message.text}</span>
                 </div>
               </div>
@@ -298,8 +363,8 @@ export default function TopupFundModal({
                 disabled={isLoading || !walletClient || !escrowData}
                 className={`w-full py-4 px-6 rounded-xl font-medium transition-all duration-300 flex items-center justify-center space-x-2 ${
                   isLoading || !walletClient || !escrowData
-                    ? 'bg-gray-500/50 text-gray-300 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-blue-500 to-cyan-600 text-white hover:shadow-lg hover:shadow-blue-500/25 hover:scale-105'
+                    ? "bg-gray-500/50 text-gray-300 cursor-not-allowed"
+                    : "bg-gradient-to-r from-blue-500 to-cyan-600 text-white hover:shadow-lg hover:shadow-blue-500/25 hover:scale-105"
                 }`}
               >
                 {isLoading ? (
@@ -310,7 +375,10 @@ export default function TopupFundModal({
                 ) : !walletClient ? (
                   <>
                     <AlertCircle className="w-5 h-5" />
-                    <span>Wallet client not ready. Please try reconnecting your wallet.</span>
+                    <span>
+                      Wallet client not ready. Please try reconnecting your
+                      wallet.
+                    </span>
                   </>
                 ) : !escrowData ? (
                   <>
