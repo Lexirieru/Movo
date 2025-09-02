@@ -4,16 +4,11 @@ import { X, Plus, Trash2, Wallet } from "lucide-react";
 import { ReceiverInGroup } from "@/types/receiverInGroupTemplate";
 import { useAuth } from "@/lib/userContext";
 import { addReceiverToGroup } from "@/app/api/api";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useWalletClientHook } from "@/lib/useWalletClient";
 import { 
-  approveTokens, 
   createEscrowOnchain, 
-  parseTokenAmount,
-  checkTokenBalance,
-  checkTokenAllowance,
-  getEscrowAddress,
-  getTokenAddress
+  parseTokenAmount
 } from "@/lib/smartContract";
 
 interface CreateStreamModalProps {
@@ -57,10 +52,9 @@ export default function CreateStreamModal({
   onClose,
   onCreateStream,
 }: CreateStreamModalProps) {
-  const router = useRouter();
   const params = useParams();
   const groupId = params.groupId as string;
-  const { user, loading, authenticated } = useAuth();
+  const { user } = useAuth();
   const walletClient = useWalletClientHook();
   const [formData, setFormData] = useState<FormData>({
     token: null,
@@ -153,28 +147,28 @@ export default function CreateStreamModal({
       }
 
       // IMPORTANT: Save escrowId to backend to link with group
-      const escrowData = {
-        groupId: groupId,
-        escrowId: escrowResult.escrowId,
-        tokenType: formData.token,
-        senderAddress: walletClient.account.address,
-        totalAmount: totalAmount.toString(),
-        receivers: formData.receivers.map(r => ({
-          address: r.address,
-          fullname: r.fullname,
-          amount: r.amount
-        })),
-        transactionHash: escrowResult.transactionHash,
-        status: 'active',
-        createdAt: new Date().toISOString()
-      };
+      // const escrowData = {
+      //   groupId: groupId,
+      //   escrowId: escrowResult.escrowId,
+      //   tokenType: formData.token,
+      //   senderAddress: walletClient.account.address,
+      //   totalAmount: totalAmount.toString(),
+      //   receivers: formData.receivers.map(r => ({
+      //     address: r.address,
+      //     fullname: r.fullname,
+      //     amount: r.amount
+      //   })),
+      //   transactionHash: escrowResult.transactionHash,
+      //   status: 'active',
+      //   createdAt: new Date().toISOString()
+      // };
 
       // Save escrow data to database to link escrowId with groupId
       // await saveEscrowToDatabase(escrowData);
 
       // If escrow created successfully onchain, save to backend
       for (const receiver of formData.receivers) {
-        const addUser = await addReceiverToGroup(
+        await addReceiverToGroup(
           user._id,
           formData.token,
           formData.token === "USDC" ? "💵" : "🔗",
@@ -298,7 +292,7 @@ export default function CreateStreamModal({
               </div>
               
               <div className="space-y-3">
-                {formData.receivers.map((receiver, index) => (
+                {formData.receivers.map((receiver) => (
                   <div key={receiver.id} className="flex items-center space-x-3 p-3 bg-white/5 border border-white/10 rounded-lg">
                     <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
                       <input
