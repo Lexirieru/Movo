@@ -100,6 +100,11 @@ export const UserModel = mongoose.model("UserData", UserDataSchema);
 
 const GroupOfUserSchema = new Schema(
   {
+    escrowId: {
+      type: String,
+      required: false,
+      unique: true,
+    },
     groupId: {
       type: String,
       required: true,

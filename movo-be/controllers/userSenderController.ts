@@ -200,6 +200,29 @@ export async function editReceiverAmountInGroup(req: Request, res: Response) {
     return;
   }
 }
+
+export async function getEscrowId(req: Request, res: Response) {
+  const { _id, groupId } = req.body;
+
+  try {
+    const loadAllGroup = await GroupOfUserModel.findOne({
+      _id,
+      groupId,
+    });
+
+    res.status(201).json({
+      message: "Group successfully fetched",
+      data: loadAllGroup?.escrowId,
+    });
+    return;
+  } catch (err: any) {
+    res.status(500).json({
+      message: "Error fetching/sending all fetched group",
+      error: err.message,
+    });
+    return;
+  }
+}
 //untuk ngefetch semua receivers yang ada di suatu grup
 export async function fetchReceiversInGroup(req: Request, res: Response) {
   const { groupId, _id } = req.body;
