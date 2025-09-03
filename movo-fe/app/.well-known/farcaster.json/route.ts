@@ -20,24 +20,35 @@ export async function GET() {
       payload: "eyJkb21haW4iOiJtb3ZvcGF5bWVudC52ZXJjZWwuYXBwIn0",
       signature: "MHgxNmE2NWExMzY2OTVlYmRlMjg3MWZlNTk3NmZlZjYxODg5MGI2MTU1NDNiYzMyOTU2NTcwNjg0NDljOWIwYzFkMDhmN2FkZmM3ODFkMDZkZjlmNjEwZGIyZTEzZjZmNTI4NTE2MDAxMzRmNGMxZTA3MDE3NWEyODRiNmJlZTU1ZjFj"
     },
-    miniapp: withValidProperties({
+    frame: withValidProperties({
+      name: "Movo",
       version: "1",
-      name: "MovoPayment",
-      subtitle: "Multi-chain crypto bridge",
-      description: "Swap crypto seamlessly across multiple blockchains. Send tokens to anyone, anywhere, and let them convert to fiat instantly.",
       iconUrl: `${URL}/icon.png`,
-      splashImageUrl: `${URL}/splash.png`,
-      splashBackgroundColor: "#000000",
       homeUrl: URL,
-      primaryCategory: "finance",
-      tags: ["crypto", "payment", "bridge", "multi-chain", "defi"],
+      imageUrl: `${URL}/image.png`,
+      buttonTitle: "Open Movo Mini App",
+      splashImageUrl: `${URL}/splash.png`,
+      splashBackgroundColor: "#0a0a0a",
+      webhookUrl: `${URL}/api/webhook`,
+      screenshotUrls: [
+        "https://res.cloudinary.com/ddzibjaqg/image/upload/v1756888292/Screenshot_2025-09-03_at_15.31.19_hbzwn9.png"
+      ],
       heroImageUrl: `${URL}/hero.png`,
-      tagline: "Multi-chain crypto bridge",
+      description: "Send crypto seamlessly across multiple blockchains. Send tokens to anyone, anywhere, and let them convert to fiat instantly",
+      subtitle: "The first multi chain cross border payment",
+      primaryCategory: "finance",
+      tags: [
+        "finance",
+        "payment",
+        "defi",
+        "fiat",
+        "idrx"
+      ],
+      tagline: "Cross border payment",
       ogTitle: "MovoPayment",
-      ogDescription: "Swap crypto seamlessly across multiple blockchains",
-      ogImageUrl: `${URL}/hero.png`,
-      requiredChains: ["eip155:1", "eip155:137", "eip155:56", "eip155:8453"],
-      requiredCapabilities: ["wallet.getEthereumProvider", "actions.signIn"]
+      ogDescription: "Just Movo it",
+      ogImageUrl: "https://res.cloudinary.com/ddzibjaqg/image/upload/v1756888757/IMG_3236_poczsu.png",
+      castShareUrl: "https://farcaster.xyz/lexirieru.eth/0x1755fdb4"
     }),
   });
 }
