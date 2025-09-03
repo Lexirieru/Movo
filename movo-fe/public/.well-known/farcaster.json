@@ -1,20 +1,35 @@
 {
-  "frame": {
-    "name": "Movo Payment",
+  "miniapp": {
     "version": "1",
+    "name": "MovoPayment",
     "iconUrl": "https://movopayment.vercel.app/icon.png",
     "homeUrl": "https://movopayment.vercel.app",
-    "imageUrl": "https://movopayment.vercel.app/image.png",
     "splashImageUrl": "https://movopayment.vercel.app/splash.png",
-    "splashBackgroundColor": "#26C6DA",
-    "webhookUrl": "https://movopayment.vercel.app/api/webhook",
-    "subtitle": "Multi-Chain Cross-Border Payment",
-    "description": "Movo is a multi-chain cross-border payroll and payment platform designed to make salary distribution across borders faster, more transparent, and more secure.",
-    "primaryCategory": "finance"
-  },
-  "accountAssociation": {
-    "header": "eyJmaWQiOjkyODc1NiwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDMzRmZlYjlmYmI5NjBERDZDNzBGYTlhYjljMjU0NjhFZkM1M2YwMzcifQ",
-    "payload": "eyJkb21haW4iOiJtb3ZvcGF5bWVudC52ZXJjZWwuYXBwIn0",
-    "signature": "MHgxNmE2NWExMzY2OTVlYmRlMjg3MWZlNTk3NmZlZjYxODg5MGI2MTU1NDNiYzMyOTU2NTcwNjg0NDljOWIwYzFkMDhmN2FkZmM3ODFkMDZkZjlmNjEwZGIyZTEzZjZmNTI4NTE2MDAxMzRmNGMxZTA3MDE3NWEyODRiNmJlZTU1ZjFj"
+    "splashBackgroundColor": "#000000",
+    "subtitle": "Multi-chain crypto bridge",
+    "description": "Swap crypto seamlessly across multiple blockchains. Send tokens to anyone, anywhere, and let them convert to fiat instantly.",
+    "primaryCategory": "finance",
+    "tags": [
+      "crypto",
+      "payment",
+      "bridge",
+      "multi-chain",
+      "defi"
+    ],
+    "heroImageUrl": "https://movopayment.vercel.app/hero.png",
+    "tagline": "Multi-chain crypto bridge",
+    "ogTitle": "MovoPayment",
+    "ogDescription": "Swap crypto seamlessly across multiple blockchains",
+    "ogImageUrl": "https://movopayment.vercel.app/hero.png",
+    "requiredChains": [
+      "eip155:1",
+      "eip155:137",
+      "eip155:56",
+      "eip155:8453"
+    ],
+    "requiredCapabilities": [
+      "wallet.getEthereumProvider",
+      "actions.signIn"
+    ]
   }
 }

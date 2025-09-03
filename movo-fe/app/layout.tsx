@@ -32,11 +32,7 @@ export async function generateMetadata(): Promise<Metadata> {
           },
         },
       }),
-      "fc:miniapp": JSON.stringify({
-        name: "MovoPayment",
-        iconUrl: `${URL}/icon.png`,
-        url: URL,
-      }),
+
     },
   };
 }
