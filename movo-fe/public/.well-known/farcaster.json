@@ -1,4 +1,9 @@
 {
+  "accountAssociation": {
+    "header": "eyJmaWQiOjkyODc1NiwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDMzRmZlYjlmYmI5NjBERDZDNzBGYTlhYjljMjU0NjhFZkM1M2YwMzcifQ",
+    "payload": "eyJkb21haW4iOiJtb3ZvcGF5bWVudC52ZXJjZWwuYXBwIn0",
+    "signature": "MHgxNmE2NWExMzY2OTVlYmRlMjg3MWZlNTk3NmZlZjYxODg5MGI2MTU1NDNiYzMyOTU2NTcwNjg0NDljOWIwYzFkMDhmN2FkZmM3ODFkMDZkZjlmNjEwZGIyZTEzZjZmNTI4NTE2MDAxMzRmNGMxZTA3MDE3NWEyODRiNmJlZTU1ZjFj"
+  },
   "miniapp": {
     "version": "1",
     "name": "MovoPayment",
