@@ -43,7 +43,7 @@ const UserDataSchema = new Schema(
     walletAddress: {
       type: String,
       required: false,
-      unique: true,
+      unique: false,
     },
     depositWalletAddress: {
       type: String,

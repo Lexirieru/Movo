@@ -25,13 +25,25 @@ const whitelist = [
   process.env.FRONTEND_URL || "",
   process.env.FARCASTER_URL || "",
 ];
+const corsOptions = {
+  origin: whitelist,
+  credentials: true, // Allow cookies
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+    "Accept",
+    "Origin",
+  ],
+  exposedHeaders: ["Set-Cookie"],
+};
+// Apply CORS middleware
+app.use(cors(corsOptions));
 
-app.use(
-  cors({
-    origin: whitelist, // Ganti dengan URL frontend Anda
-    credentials: true, // Izinkan cookie untuk dikirim bersama permintaan
-  })
-);
+// Handle preflight requests
+app.options("*", cors(corsOptions));
+
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded());

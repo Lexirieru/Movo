@@ -9,12 +9,23 @@ import { sha256, toUtf8Bytes } from "ethers/lib/utils";
 const movoApiKey = process.env.IDRX_API_KEY!;
 const movoSecretKey = process.env.IDRX_SECRET_KEY!;
 import FormData from "form-data";
+import { checkConnection } from "../config/atlas";
 
 export async function onBoardingUser(req: Request, res: Response) {
   const { email, fullname, password } = req.body;
 
   if (!email || !fullname) {
     res.status(404).json({ message: "Email and fullname are required!" });
+    return;
+  }
+
+  const isConnected = await checkConnection();
+  if (!isConnected) {
+    res.status(503).json({
+      message: "Database temporarily unavailable. Please try again.",
+      statusCode: 503,
+      error: "DB_CONNECTION_ERROR",
+    });
     return;
   }
 
@@ -114,7 +125,22 @@ export async function onBoardingUser(req: Request, res: Response) {
     return;
   } catch (err: any) {
     console.log("Full error:", err.response?.data || err.message);
-    res.status(500).json(err.response?.data || err.message);
+    if (
+      err.message?.includes("buffering timed out") ||
+      err.message?.includes("timeout")
+    ) {
+      res.status(408).json({
+        message: "Database operation timed out. Please try again.",
+        statusCode: 408,
+        error: "TIMEOUT",
+      });
+    }
+
+    res.status(500).json({
+      message: "Registration failed. Please try again.",
+      statusCode: 500,
+      error: "INTERNAL_ERROR",
+    });
     return;
   }
 }
