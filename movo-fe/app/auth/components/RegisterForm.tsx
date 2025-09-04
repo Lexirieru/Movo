@@ -31,7 +31,7 @@ export default function RegisterForm() {
     await new Promise((resolve) => setTimeout(resolve, 2000));
     setIsLoading(false);
     console.log(response);
-    if (response.data) {
+    if (response.statusCode == 200) {
       // kasih redirect ke halaman dashboard pengguna
       router.push("/addbankdata");
     }

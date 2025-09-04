@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
-if (process.env.NODE_ENV !== "production") {
-  dotenv.config();
-}
+dotenv.config();
+import path from "path";
+
 import { connectDB } from "./config/atlas";
 import express from "express";
 import methodOverride from "method-override";
@@ -21,9 +21,14 @@ import { senderListener } from "./services/senderSmartContractListener";
 const app = express();
 connectDB();
 
+const whitelist = [
+  process.env.FRONTEND_URL || "",
+  process.env.FARCASTER_URL || "",
+];
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL, // Ganti dengan URL frontend Anda
+    origin: whitelist, // Ganti dengan URL frontend Anda
     credentials: true, // Izinkan cookie untuk dikirim bersama permintaan
   })
 );
@@ -31,6 +36,7 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded());
 app.use(methodOverride("_method")); //  buat munculin UPDATE dan DELETE
+app.use("/public", express.static(path.join(__dirname, "../public")));
 
 app.use(
   session({
@@ -38,22 +44,16 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      httpOnly: false,
-      secure: false,
+      httpOnly: true,
+      secure: true,
       maxAge: 24 * 60 * 60 * 1000, // 1 day
+      sameSite: "none",
     },
   })
 );
 
 app.use(passport.initialize());
 app.use(passport.session());
-
-// app.use((req, res, next) => {
-//     if (process.env.NODE_ENV === 'production' && !req.secure) {
-//         return res.redirect(`https://${req.headers.host}${req.url}`);
-//     }
-//     next();
-// });
 
 app.use("/", authRoutes);
 app.use("/", pricefeedRoutes);

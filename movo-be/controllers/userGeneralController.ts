@@ -8,6 +8,7 @@ import { generateCookiesToken } from "../routes/auth";
 import { sha256, toUtf8Bytes } from "ethers/lib/utils";
 const movoApiKey = process.env.IDRX_API_KEY!;
 const movoSecretKey = process.env.IDRX_SECRET_KEY!;
+import FormData from "form-data";
 
 export async function onBoardingUser(req: Request, res: Response) {
   const { email, fullname, password } = req.body;
@@ -16,23 +17,51 @@ export async function onBoardingUser(req: Request, res: Response) {
     res.status(404).json({ message: "Email and fullname are required!" });
     return;
   }
-  const saltRounds = 10; // default cukup 10, jangan terlalu tinggi biar ga lambat
+
+  const saltRounds = 10;
   const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-  console.log(email, password, fullname);
-  const form = {
+  const response = await axios({
+    method: "GET",
+    url: "https://movopayment.vercel.app/movo%20full.png",
+    responseType: "arraybuffer",
+  });
+
+  let imageBuffer;
+  if (Buffer.isBuffer(response.data)) {
+    imageBuffer = response.data;
+  } else if (response.data instanceof ArrayBuffer) {
+    imageBuffer = Buffer.from(response.data);
+  } else {
+    imageBuffer = Buffer.from(response.data);
+  }
+
+  console.log("Image buffer size:", imageBuffer.length);
+
+  // PENTING: Gunakan FormData untuk proper multipart handling
+  const formData = new FormData();
+  formData.append("email", email);
+  formData.append("fullname", fullname);
+  formData.append("hashedPassword", hashedPassword);
+  formData.append("idFile", imageBuffer, {
+    filename: "movo-full.png",
+    contentType: "image/png",
+  });
+
+  // Untuk signature, tetap gunakan object biasa (tanpa FormData)
+  const dataForSignature = {
     email,
     fullname,
     hashedPassword,
-    // address,
-    // idNumber,
-    idFile: fs.createReadStream("./Screenshot 2025-08-28 at 22.36.43.png"),
+    idFile: imageBuffer.toString("base64"), // Convert ke base64 untuk signature
   };
 
   const path = "https://idrx.co/api/auth/onboarding";
-  const bufferReq = Buffer.from(JSON.stringify(form), "base64").toString(
-    "utf8"
-  );
+  const bufferReq = Buffer.from(
+    JSON.stringify(dataForSignature),
+    "base64"
+  ).toString("utf8");
+
   const timestamp = Math.round(new Date().getTime()).toString();
   const sig = createSignature(
     "POST",
@@ -43,9 +72,9 @@ export async function onBoardingUser(req: Request, res: Response) {
   );
 
   try {
-    const resData = await axios.post(path, form, {
+    const resData = await axios.post(path, formData, {
       headers: {
-        "Content-Type": "multipart/form-data",
+        ...formData.getHeaders(), // Penting: ambil headers dari FormData
         "idrx-api-key": movoApiKey,
         "idrx-api-sig": sig,
         "idrx-api-ts": timestamp,
@@ -61,32 +90,31 @@ export async function onBoardingUser(req: Request, res: Response) {
       email,
       hashedPassword,
       fullname,
-      idFile: form.idFile.path,
+      idFile: "movo-full.png",
       apiKey: resData.data.data.apiKey,
       secretKey: resData.data.data.apiSecret,
     });
-
-    // kurang mbuat handle untuk user yang udah onboard alias user yang mau login
 
     await newUser.save();
 
     const token = await generateCookiesToken(email, newUser);
 
     res.cookie("user_session", token, {
-      httpOnly: false,
+      httpOnly: true,
       secure: true,
       sameSite: "none",
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 hari
+      maxAge: 30 * 24 * 60 * 60 * 1000,
     });
 
     res.status(200).json({
       message: "Login successful",
       statusCode: 200,
     });
+
     return;
-  } catch (err) {
-    console.log(err);
-    res.status(500).json(err);
+  } catch (err: any) {
+    console.log("Full error:", err.response?.data || err.message);
+    res.status(500).json(err.response?.data || err.message);
     return;
   }
 }

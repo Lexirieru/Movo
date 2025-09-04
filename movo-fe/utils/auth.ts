@@ -1,9 +1,8 @@
 // utils/auth.ts
-import axios from "axios";
-
+import { api } from "@/app/api/api";
 export const getMe = async () => {
   try {
-    const res = await axios.get(
+    const res = await api.get(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/check-auth`,
       {
         withCredentials: true, // penting untuk kirim cookie `user_session`
@@ -12,9 +11,7 @@ export const getMe = async () => {
 
     return res.data;
   } catch (err: any) {
-    if (process.env.NODE_ENV === "development") {
-      console.error("getMe error:", err.message || err);
-    }
+    console.error(err.message || err);
     return null;
   }
 };

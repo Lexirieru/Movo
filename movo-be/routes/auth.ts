@@ -85,11 +85,12 @@ router.post(
 
       const token = await generateCookiesToken(email, user);
       console.log(token);
+
       res.cookie("user_session", token, {
-        httpOnly: false, // sebaiknya true di production
-        secure: true,
-        sameSite: "none",
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 hari
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        maxAge: 30 * 24 * 60 * 60 * 1000,
       });
 
       res.status(200).json({
@@ -131,10 +132,10 @@ router.post(
       const token = await generateCookiesToken(user.email, user);
 
       res.cookie("user_session", token, {
-        httpOnly: false, // sebaiknya true di production
-        secure: true,
-        sameSite: "none",
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 hari
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        maxAge: 30 * 24 * 60 * 60 * 1000,
       });
 
       res.status(200).json({

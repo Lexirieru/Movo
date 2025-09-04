@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import { useState } from "react";
 import FormInput from "./FormInput";
 import SocialLogin from "./SocialLogin";
@@ -11,7 +11,7 @@ export default function LoginForm() {
   const router = useRouter();
   const [formData, setFormData] = useState({
     email: "",
-    password: ""
+    password: "",
   });
   const [isLoading, setIsLoading] = useState(false);
 
@@ -22,13 +22,12 @@ export default function LoginForm() {
   const handleSubmit = async () => {
     setIsLoading(true);
     // Simulate API call
-    const response = await login(formData.email, formData.password)
-    console.log(response)
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    const response = await login(formData.email, formData.password);
+    console.log(response);
+    await new Promise((resolve) => setTimeout(resolve, 2000));
     setIsLoading(false);
-    console.log(response.statusCode);
-    if(response.statusCode == 200){
-      router.push("/dashboard")
+    if (response.statusCode == 200) {
+      router.push("/dashboard");
       // kasih redirect ke halaman dashboard pengguna
     }
   };
@@ -65,8 +64,8 @@ export default function LoginForm() {
         </button>
       </div>
 
-      <SubmitButton 
-        isLoading={isLoading} 
+      <SubmitButton
+        isLoading={isLoading}
         onClick={handleSubmit}
         text="Sign In"
       />

@@ -8,7 +8,7 @@ mongoose.set("strictQuery", false);
 export async function connectDB() {
   try {
     const conn = await mongoose.connect(process.env.MONGODB_URI!!, {
-      serverSelectionTimeoutMS: 10000, // 10 detik
+      serverSelectionTimeoutMS: 30000, // 10 detik
     });
 
     console.log(`Database Connected : ${conn.connection.host}`);
