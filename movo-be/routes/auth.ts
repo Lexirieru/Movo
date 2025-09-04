@@ -84,12 +84,11 @@ router.post(
       }
 
       const token = await generateCookiesToken(email, user);
-      console.log(token);
 
       res.cookie("user_session", token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        sameSite: "none",
+        secure: true,
         maxAge: 30 * 24 * 60 * 60 * 1000,
       });
 
@@ -133,8 +132,8 @@ router.post(
 
       res.cookie("user_session", token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        sameSite: "none",
+        secure: true,
         maxAge: 30 * 24 * 60 * 60 * 1000,
       });
 

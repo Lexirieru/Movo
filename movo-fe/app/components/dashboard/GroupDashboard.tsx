@@ -12,8 +12,6 @@ import CreateGroupModal from "./groups/CreateGroupModal";
 import TopupFundModal from "./groups/TopupFundModal";
 import { loadAllGroup, addGroup } from "@/app/api/api";
 
-
-
 export default function GroupDashboard() {
   const { user, loading } = useAuth();
   const [groups, setGroups] = useState<GroupOfUser[]>([]);
@@ -31,10 +29,12 @@ export default function GroupDashboard() {
       try {
         const groupData = await loadAllGroup(user._id);
         if (Array.isArray(groupData)) {
-          const formattedGroups: GroupOfUser[] = groupData.map((g: GroupOfUser) => ({
-            ...g,
-            createdAt: g.createdAt || new Date().toISOString(),
-          }));
+          const formattedGroups: GroupOfUser[] = groupData.map(
+            (g: GroupOfUser) => ({
+              ...g,
+              createdAt: g.createdAt || new Date().toISOString(),
+            }),
+          );
           setGroups(formattedGroups);
         }
         setHasFetched(true);
@@ -66,33 +66,42 @@ export default function GroupDashboard() {
 
   const handleCreateGroup = async (groupData: { groupName: string }) => {
     try {
-      if (!user._id && !user.email) {
-        console.log("Please login first!");
-      } else {
-        // Generate unique group ID
-        const groupId = `group_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        // Create new group object
-        const newGroup: GroupOfUser = {
-          groupId,
-          nameOfGroup: groupData.groupName,
-          senderId: user?._id || "",
-          senderName: user?.fullname || "",
-          Receivers: [],
-          totalRecipients: 0,
-          createdAt: new Date().toString(),
-        };
-        // Add to local state immediately for better UX
-        setGroups((prev) => [newGroup, ...prev]);
-        const response = await addGroup(
-          user._id,
-          user.email,
-          groupId,
-          groupData.groupName,
-        );
-        if (response && response.data) {
-          setIsCreateModalOpen(false);
-          router.push(`/dashboard/sender/${groupId}`);
-        }
+      // Tunggu user siap
+      if (loading || !user?._id || !user?.email) {
+        console.log("Waiting for user to load...");
+        await new Promise((resolve) => {
+          const checkUser = setInterval(() => {
+            if (!loading && user?._id && user?.email) {
+              clearInterval(checkUser);
+              resolve(true);
+            }
+          }, 50);
+        });
+      }
+      console.log(user);
+      // Generate unique group ID
+      const groupId = `group_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      // Create new group object
+      const newGroup: GroupOfUser = {
+        groupId,
+        nameOfGroup: groupData.groupName,
+        senderId: user?._id || "",
+        senderName: user?.fullname || "",
+        Receivers: [],
+        totalRecipients: 0,
+        createdAt: new Date().toString(),
+      };
+      // Add to local state immediately for better UX
+      setGroups((prev) => [newGroup, ...prev]);
+      const response = await addGroup(
+        user._id,
+        user.email,
+        groupId,
+        groupData.groupName,
+      );
+      if (response && response.data) {
+        setIsCreateModalOpen(false);
+        router.push(`/dashboard/sender/${groupId}`);
       }
     } catch (err) {
       console.error("Failed to create group", err);

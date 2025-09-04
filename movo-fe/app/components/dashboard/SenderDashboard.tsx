@@ -61,7 +61,6 @@ export default function SenderDashboard({
 
     const fetchGroupStreams = async () => {
       try {
-        console.log(user.role);
         const group: GroupOfUser | null = await loadSpecifiedGroup(
           user._id,
           groupId,
