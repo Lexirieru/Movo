@@ -164,18 +164,25 @@ export const checkTokenBalance = async (
 export const checkTokenAllowance = async (
   tokenType: "USDC" | "IDRX",
   owner: string,
-  spender: string,
+  escrowId: string,
 ): Promise<bigint> => {
   try {
+    console.log(escrowId);
+    const details = await escrowIdrxContract.read.getEscrowDetails([
+      escrowId as `0x${string}`,
+    ]);
+    console.log(details);
     if (tokenType === "USDC") {
       return await usdcContract.read.allowance([
         owner as `0x${string}`,
-        spender as `0x${string}`,
+        details[0] as `0x${string}`,
+        // spender as `0x${string}`,
       ]);
     } else {
       return await idrxContract.read.allowance([
         owner as `0x${string}`,
-        spender as `0x${string}`,
+        details[0] as `0x${string}`,
+        // spender as `0x${string}`,
       ]);
     }
   } catch (error) {
@@ -188,7 +195,7 @@ export const checkTokenAllowance = async (
 export const approveTokens = async (
   walletClient: any,
   tokenType: "USDC" | "IDRX",
-  spender: string,
+  escrowId: string,
   amount: bigint,
 ): Promise<boolean> => {
   try {
@@ -199,13 +206,16 @@ export const approveTokens = async (
       contract = idrxContract;
     }
 
+    const details = await escrowIdrxContract.read.getEscrowDetails([
+      escrowId as `0x${string}`,
+    ]);
+
     const { request } = await contract.simulate.approve(
-      [spender as `0x${string}`, amount],
+      [details[0] as `0x${string}`, amount],
       {
         account: walletClient.account.address,
       },
     );
-    console.log("sini");
 
     const hash = await walletClient.writeContract(request);
     await publicClient.waitForTransactionReceipt({ hash });
@@ -252,9 +262,6 @@ export const createEscrowOnchain = async (
         `Please switch to Base Sepolia network (Chain ID: ${baseSepolia.id})`,
       );
     }
-
-    const escrowId = generateEscrowId(walletClient.account.address, Date.now());
-    const escrowIdBytes = `0x${escrowId}` as `0x${string}`;
 
     let contract;
     if (tokenType === "USDC") {
@@ -314,7 +321,6 @@ export const createEscrowOnchain = async (
 
     return {
       success: true,
-      escrowId,
       transactionHash: hash,
     };
   } catch (error) {
@@ -391,12 +397,27 @@ export const topUpFunds = async (
       contract = escrowIdrxContract;
     }
 
+    //    {
+    //   inputs: [
+    //     { internalType: "bytes32", name: "_escrowId", type: "bytes32" },
+    //     { internalType: "uint256", name: "_amount", type: "uint256" },
+    //   ],
+    //   name: "topUpFunds",
+    //   outputs: [],
+    //   stateMutability: "nonpayable",
+    //   type: "function",
+    // },
+
+    // escrowId :0x961497dd1a35f330dc1578ec978c6813d026361df4f7a766360c1704d676c8a3
+    // amount : 5000000n
+
     const { request } = await contract.simulate.topUpFunds(
       [escrowId as `0x${string}`, amount],
       {
         account: walletClient.account.address,
       },
     );
+    console.log("dibawah");
 
     const hash = await walletClient.writeContract(request);
     const receipt = await publicClient.waitForTransactionReceipt({ hash });
@@ -414,28 +435,6 @@ export const topUpFunds = async (
   }
 };
 
-// Get escrow details (legacy function - tries both USDC and IDRX)
-export const getEscrowDetails = async (escrowId: string): Promise<any> => {
-  try {
-    // Try USDC escrow first
-    try {
-      const usdcEscrow = await escrowUsdcContract.read.getEscrowDetails([
-        escrowId as `0x${string}`,
-      ]);
-      return { ...usdcEscrow, tokenType: "USDC" };
-    } catch {
-      // Try IDRX escrow
-      const idrxEscrow = await escrowIdrxContract.read.getEscrowDetails([
-        escrowId as `0x${string}`,
-      ]);
-      return { ...idrxEscrow, tokenType: "IDRX" };
-    }
-  } catch (error) {
-    console.error("Error getting escrow details:", error);
-    return null;
-  }
-};
-
 // Withdraw USDC to Fiat
 export const withdrawUSDCTofiat = async (
   walletClient: any,
@@ -444,7 +443,6 @@ export const withdrawUSDCTofiat = async (
   depositWalletAddress: `0x${string}`,
 ): Promise<{ success: boolean; transactionHash?: string; error?: string }> => {
   try {
-
     // Kirim tx
     const hash = await walletClient.writeContract({
       address: getEscrowAddress("USDC"),

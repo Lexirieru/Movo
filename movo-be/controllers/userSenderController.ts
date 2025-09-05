@@ -13,7 +13,7 @@ export async function addGroup(req: Request, res: Response) {
   try {
     if (!_id || !groupId || !nameOfGroup) {
       res.status(400).json({
-        message: "Email, groupId, and nameOfGroup are required",
+        message: "Email, groupId,appr and nameOfGroup are required",
       });
       return;
     }
@@ -55,8 +55,6 @@ export async function addGroup(req: Request, res: Response) {
   }
 }
 
-// untuk ngeadd receiver ke suatu grup lewat depositwalletaddress dia
-// untuk ngeadd receiver ke suatu grup lewat depositWalletAddress + sekalian nambahin amount
 export async function saveEscrowToDatabase(req: Request, res: Response) {
   const {
     groupId,

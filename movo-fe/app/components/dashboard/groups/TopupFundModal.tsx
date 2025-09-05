@@ -53,7 +53,6 @@ export default function TopupFundModal({
         setIsLoadingData(true);
         try {
           const groupResult = await loadSpecifiedGroup(user._id, groupId);
-          console.log(groupResult);
           if (groupResult) {
             setGroupData(groupResult);
           } else {
@@ -110,7 +109,6 @@ export default function TopupFundModal({
   };
 
   const handleTopup = async () => {
-    console.log(groupData.escrowId);
     if (!walletClient) {
       setMessage({
         type: "error",
@@ -168,15 +166,18 @@ export default function TopupFundModal({
           `Insufficient balance. You have ${formatTokenAmount(userBalance, groupData.originCurrency === "USDC" ? 6 : 2)} ${groupData.originCurrency}`,
         );
       }
+      console.log(groupData.escrowId);
 
       const currentAllowance = await checkTokenAllowance(
         groupData.originCurrency,
         address,
         groupData.escrowId,
+        // groupData.escrowId,
       );
-
       console.log(currentAllowance);
-      if (currentAllowance < parsedAmount) {
+      console.log(parsedAmount);
+
+      if (currentAllowance <= parsedAmount) {
         // Need to approve first
         const approvalSuccess = await approveTokens(
           walletClient,
